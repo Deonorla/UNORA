@@ -1,18 +1,10 @@
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
-import {
-  MONTHS,
-  BORROWED_SERIES,
-  REPAID_SERIES,
-  SCORE_SERIES,
-  ALLOCATION,
-  allocationTotal,
-  formatCompact,
-} from '@/lib/portfolio';
+import { MONTHS, BORROWED_SERIES, REPAID_SERIES, formatCompact } from '@/lib/portfolio';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-/** Shared card shell so the three panels line up. */
+/** Shared card shell so every panel lines up. */
 function Panel({
   title,
   meta,
@@ -51,6 +43,10 @@ function Panel({
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Borrower-only: mirrored bar chart                                          */
+/* -------------------------------------------------------------------------- */
+
 /**
  * Mirrored bar chart: drawn principal above the axis, repaid principal below it.
  * The gap between the two is the outstanding balance — which is the whole story of
@@ -65,9 +61,11 @@ export function BorrowRepayChart() {
 
   return (
     <Panel title="Borrowed vs repaid" meta="Last 8 months" delay={0.25}>
-      {/* Drawn */}
       <div className="text-center mb-3">
-        <div className="font-mono text-[9px] uppercase tracking-widest mb-0.5" style={{ color: colors.textMuted }}>
+        <div
+          className="font-mono text-[9px] uppercase tracking-widest mb-0.5"
+          style={{ color: colors.textMuted }}
+        >
           Drawn
         </div>
         <div className="font-serif text-3xl font-semibold tabular-nums" style={{ color: colors.text }}>
@@ -75,7 +73,6 @@ export function BorrowRepayChart() {
         </div>
       </div>
 
-      {/* Bars — up for drawn, down for repaid. */}
       <div className="flex items-end gap-1.5 h-[96px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-end h-full">
@@ -90,7 +87,6 @@ export function BorrowRepayChart() {
         ))}
       </div>
 
-      {/* Axis */}
       <div className="flex items-center gap-1.5 my-1.5">
         {MONTHS.map((month) => (
           <div
@@ -117,9 +113,11 @@ export function BorrowRepayChart() {
         ))}
       </div>
 
-      {/* Repaid */}
       <div className="text-center mt-3 pt-3 border-t" style={{ borderColor: colors.border }}>
-        <div className="font-mono text-[9px] uppercase tracking-widest mb-0.5" style={{ color: colors.textMuted }}>
+        <div
+          className="font-mono text-[9px] uppercase tracking-widest mb-0.5"
+          style={{ color: colors.textMuted }}
+        >
           Repaid
         </div>
         <div className="font-serif text-3xl font-semibold tabular-nums" style={{ color: colors.text }}>
@@ -133,11 +131,46 @@ export function BorrowRepayChart() {
   );
 }
 
-/** Donut of where the wallet's USDC sits, all three being the same asset. */
-export function CollateralGauge() {
+/* -------------------------------------------------------------------------- */
+/*  Shared: donut                                                             */
+/* -------------------------------------------------------------------------- */
+
+export interface DonutSlice {
+  label: string;
+  hint: string;
+  value: number;
+  color: string;
+}
+
+interface DonutProps {
+  title: string;
+  meta?: string;
+  delay?: number;
+  slices: DonutSlice[];
+  /** Caption above the centre figure — "Total", "Pools", etc. */
+  centerLabel: string;
+  /** Renders the centre figure from the summed slice values. */
+  formatCenter?: (total: number) => string;
+  ariaLabel: string;
+}
+
+/**
+ * Donut of how a fixed pot of capital is split. Used twice on the dashboard — once for
+ * where the wallet's USDC sits, once for how it is spread across lending tranches — so
+ * it takes its slices rather than importing them.
+ */
+export function AllocationDonut({
+  title,
+  meta,
+  delay = 0,
+  slices,
+  centerLabel,
+  formatCenter = formatCompact,
+  ariaLabel,
+}: DonutProps) {
   const colors = useTheme();
 
-  const total = allocationTotal();
+  const total = slices.reduce((sum, slice) => sum + slice.value, 0);
   const size = 172;
   const stroke = 18;
   const radius = (size - stroke) / 2;
@@ -145,14 +178,14 @@ export function CollateralGauge() {
 
   // Each slice is an arc offset by the sum of the slices before it. Computed purely —
   // accumulating into a variable during the render map trips the React Compiler.
-  const fractions = ALLOCATION.map((slice) => slice.value / total);
+  const fractions = slices.map((slice) => (total > 0 ? slice.value / total : 0));
   const offsets = fractions.map((_, i) => fractions.slice(0, i).reduce((a, b) => a + b, 0));
 
   return (
-    <Panel title="Capital allocation" meta={formatCompact(total)} delay={0.3}>
+    <Panel title={title} meta={meta} delay={delay}>
       {/* my-auto centres it in the free space, so equal-height cards don't pool whitespace. */}
       <div className="relative my-auto mx-auto" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
+        <svg width={size} height={size} className="-rotate-90" role="img" aria-label={ariaLabel}>
           <circle
             cx={size / 2}
             cy={size / 2}
@@ -161,7 +194,7 @@ export function CollateralGauge() {
             stroke="rgba(0,0,0,0.05)"
             strokeWidth={stroke}
           />
-          {ALLOCATION.map((slice, i) => {
+          {slices.map((slice, i) => {
             const dash = fractions[i] * circumference;
             const offset = offsets[i] * circumference;
             return (
@@ -185,16 +218,16 @@ export function CollateralGauge() {
 
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="font-mono text-[8px] uppercase tracking-widest" style={{ color: colors.textMuted }}>
-            Total
+            {centerLabel}
           </span>
           <span className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>
-            {formatCompact(total)}
+            {formatCenter(total)}
           </span>
         </div>
       </div>
 
       <div className="pt-5 space-y-2.5">
-        {ALLOCATION.map((slice) => (
+        {slices.map((slice) => (
           <div key={slice.label} className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
             <div className="min-w-0 flex-1">
@@ -206,7 +239,7 @@ export function CollateralGauge() {
               </div>
             </div>
             <span className="font-mono text-[10px] tabular-nums shrink-0" style={{ color: colors.text }}>
-              {Math.round((slice.value / total) * 100)}%
+              {Math.round((total > 0 ? slice.value / total : 0) * 100)}%
             </span>
           </div>
         ))}
@@ -214,6 +247,10 @@ export function CollateralGauge() {
     </Panel>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Shared: trend line                                                        */
+/* -------------------------------------------------------------------------- */
 
 /** Catmull-Rom to cubic bezier, so the line flows instead of reading as a polyline. */
 function smoothPath(points: { x: number; y: number }[]): string {
@@ -233,78 +270,93 @@ function smoothPath(points: { x: number; y: number }[]): string {
   return d;
 }
 
+export interface TrendThreshold {
+  value: number;
+  label: string;
+  color: string;
+}
+
+interface TrendProps {
+  title: string;
+  meta?: string;
+  delay?: number;
+  series: number[];
+  /** Fixed, labelled y-axis bounds — never the data range. */
+  yMin: number;
+  yMax: number;
+  ticks: number[];
+  thresholds?: TrendThreshold[];
+  /** Must be unique on the page; two instances would otherwise share one gradient. */
+  gradientId: string;
+  ariaLabel: string;
+}
+
 /**
- * Score history.
+ * Smoothed area line over `MONTHS`.
  *
- * The y-axis is a fixed 40-100 band rather than the data range, so a four-point move
- * doesn't render as a cliff — but it is labelled, because a silently cropped axis is
- * how charts lie. Tier thresholds are drawn in so the climb has visible stakes.
+ * The y-axis is always a fixed, labelled band rather than the data range, so a small
+ * move doesn't render as a cliff — but it is labelled, because a silently cropped axis
+ * is how charts lie. Optional thresholds draw reference lines in.
  */
-export function ScoreHistoryChart() {
+export function TrendLineChart({
+  title,
+  meta,
+  delay = 0,
+  series,
+  yMin,
+  yMax,
+  ticks,
+  thresholds = [],
+  gradientId,
+  ariaLabel,
+}: TrendProps) {
   const colors = useTheme();
 
   const w = 420;
   const h = 380;
   const padX = 30;
   const padY = 14;
-  const yMin = 40;
-  const yMax = 100;
 
-  const x = (i: number) => padX + (i / (SCORE_SERIES.length - 1)) * (w - padX - 10);
-  const y = (score: number) => padY + (1 - (score - yMin) / (yMax - yMin)) * (h - padY * 2);
+  const x = (i: number) => padX + (i / (series.length - 1)) * (w - padX - 10);
+  const y = (value: number) => padY + (1 - (value - yMin) / (yMax - yMin)) * (h - padY * 2);
 
-  const points = SCORE_SERIES.map((score, i) => ({ x: x(i), y: y(score) }));
+  const points = series.map((value, i) => ({ x: x(i), y: y(value) }));
   const line = smoothPath(points);
-  const area = `${line} L ${x(SCORE_SERIES.length - 1)} ${h - padY} L ${x(0)} ${h - padY} Z`;
-
-  const thresholds = [
-    { score: 80, label: 'Prime', color: '#639922' },
-    { score: 65, label: 'Established', color: '#7C3AED' },
-  ];
-
+  const area = `${line} L ${x(series.length - 1)} ${h - padY} L ${x(0)} ${h - padY} Z`;
   const last = points[points.length - 1];
 
   return (
-    <Panel title="Score history" meta="+14 pts" delay={0.35}>
+    <Panel title={title} meta={meta} delay={delay}>
       {/* my-auto centres the plot in the free space — same reasoning as the gauge. */}
       <svg
         viewBox={`0 0 ${w} ${h}`}
         className="w-full h-auto my-auto"
         role="img"
-        aria-label="Credit score by month"
+        aria-label={ariaLabel}
       >
         <defs>
-          <linearGradient id="score-fill" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.22" />
             <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.02" />
           </linearGradient>
         </defs>
 
-        {/* Y axis ticks */}
-        {[40, 60, 80, 100].map((tick) => (
+        {ticks.map((tick) => (
           <g key={tick}>
-            <line
-              x1={padX}
-              y1={y(tick)}
-              x2={w - 10}
-              y2={y(tick)}
-              stroke={colors.border}
-              strokeWidth="1"
-            />
+            <line x1={padX} y1={y(tick)} x2={w - 10} y2={y(tick)} stroke={colors.border} strokeWidth="1" />
             <text x={2} y={y(tick) + 4} fontSize="11" fill={colors.textMuted} fontFamily="monospace">
               {tick}
             </text>
           </g>
         ))}
 
-        {/* Tier thresholds */}
         {thresholds.map((t) => (
           <g key={t.label}>
             <line
               x1={padX}
-              y1={y(t.score)}
+              y1={y(t.value)}
               x2={w - 10}
-              y2={y(t.score)}
+              y2={y(t.value)}
               stroke={t.color}
               strokeWidth="1"
               strokeDasharray="3 4"
@@ -312,20 +364,20 @@ export function ScoreHistoryChart() {
             />
             <text
               x={padX + 3}
-              y={y(t.score) - 6}
+              y={y(t.value) - 6}
               fontSize="11"
               fill={t.color}
               opacity="0.9"
               fontFamily="monospace"
             >
-              {t.label} {t.score}
+              {t.label}
             </text>
           </g>
         ))}
 
         <motion.path
           d={area}
-          fill="url(#score-fill)"
+          fill={`url(#${gradientId})`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.6 }}
@@ -342,7 +394,6 @@ export function ScoreHistoryChart() {
           transition={{ duration: 1.2, delay: 0.45, ease }}
         />
 
-        {/* Current point */}
         <motion.circle
           cx={last.x}
           cy={last.y}

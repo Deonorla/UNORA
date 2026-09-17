@@ -58,14 +58,18 @@ export function allocationTotal(): number {
   return ALLOCATION.reduce((sum, slice) => sum + slice.value, 0);
 }
 
-/** Headline figures for the stat cards, each with its own sparkline. */
+/** Headline figures for the stat cards. */
 export interface StatCard {
   label: string;
   value: string;
   delta: string;
   /** Direction of the delta, from the wallet's point of view. */
   tone: 'good' | 'warn' | 'neutral';
-  series: number[];
+  /**
+   * Sparkline data. Omit for a card whose value isn't a trend — a card showing which
+   * pool you're in has no shape over time, and drawing one would be decoration.
+   */
+  series?: number[];
 }
 
 export const STAT_CARDS: StatCard[] = [

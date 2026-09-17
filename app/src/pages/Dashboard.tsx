@@ -1,15 +1,27 @@
+import { useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Bell } from 'lucide-react';
 import { SCORE } from '@/lib/protocol';
+import {
+  ALLOCATION,
+  SCORE_SERIES,
+  STAT_CARDS,
+  allocationTotal,
+  formatCompact,
+} from '@/lib/portfolio';
+import { resolveWalletState } from '@/lib/position';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader from '@/components/dashboard/PageHeader';
 import TierDeck from '@/components/dashboard/TierDeck';
 import StatCards from '@/components/dashboard/StatCards';
 import {
+  AllocationDonut,
   BorrowRepayChart,
-  CollateralGauge,
-  ScoreHistoryChart,
+  TrendLineChart,
 } from '@/components/dashboard/PortfolioCharts';
+import LendingSection from '@/components/dashboard/LendingSection';
+import EmptyWalletState from '@/components/dashboard/EmptyWalletState';
 import ActivityList from '@/components/dashboard/ActivityList';
 
 function GreetingHeader() {
@@ -62,27 +74,97 @@ function ScoreProvenance() {
   );
 }
 
+function SectionLabel({ children }: { children: string }) {
+  const colors = useTheme();
+  return (
+    <div
+      className="font-mono text-[9px] uppercase tracking-widest mb-3"
+      style={{ color: colors.textMuted }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * The dashboard adapts to what the wallet actually has:
+ *
+ *   scored            -> the borrower half (score, tiers, ceiling, borrow history)
+ *   active deposit    -> the lender half (position, pool health, yield)
+ *   both              -> stacked, each under its own label
+ *   neither           -> the empty state
+ *
+ * `?state=` overrides the mock position so each branch can be seen without a wallet:
+ * `new`, `borrower`, `lender`, `lender-multi`, `both`, `both-multi`.
+ */
 export default function Dashboard() {
+  const { search } = useLocation();
+  const { position } = useMemo(() => resolveWalletState(search), [search]);
+
+  const hasBorrower = position.scored;
+  const lending = position.lending;
+  const hasLending = lending !== null;
+  const stacked = hasBorrower && hasLending;
+
   return (
     <DashboardLayout>
-        <GreetingHeader />
+      <GreetingHeader />
 
-        <div className="max-w-[1100px] mx-auto px-8 py-8">
-          {/* Score tiers, fanned like a card deck — current tier in front. */}
-          <TierDeck />
-          <ScoreProvenance />
+      <div className="max-w-[1100px] mx-auto px-8 py-8">
+        {!hasBorrower && !hasLending && <EmptyWalletState />}
 
-          <StatCards />
+        {hasBorrower && (
+          <div className={stacked ? 'mb-8' : ''}>
+            {stacked && <SectionLabel>Borrowing</SectionLabel>}
 
-          {/* Three panels across, then the full-width statement below. */}
-          <div className="grid grid-cols-[1.15fr_1fr_1fr] gap-4 mb-4">
-            <BorrowRepayChart />
-            <CollateralGauge />
-            <ScoreHistoryChart />
+            <TierDeck />
+            <ScoreProvenance />
+
+            <StatCards cards={STAT_CARDS} />
+
+            {/* Three panels across, then the full-width statement below. */}
+            <div className="grid grid-cols-[1.15fr_1fr_1fr] gap-4 mt-4">
+              <BorrowRepayChart />
+              <AllocationDonut
+                title="Capital allocation"
+                meta={formatCompact(allocationTotal())}
+                delay={0.3}
+                slices={ALLOCATION}
+                centerLabel="Total"
+                ariaLabel="Where the wallet's USDC sits"
+              />
+              <TrendLineChart
+                title="Score history"
+                meta="+14 pts"
+                delay={0.35}
+                series={SCORE_SERIES}
+                yMin={40}
+                yMax={100}
+                ticks={[40, 60, 80, 100]}
+                thresholds={[
+                  { value: 80, label: 'Prime 80', color: '#639922' },
+                  { value: 65, label: 'Established 65', color: '#7C3AED' },
+                ]}
+                gradientId="score-fill"
+                ariaLabel="Credit score by month"
+              />
+            </div>
           </div>
+        )}
 
-          <ActivityList />
-        </div>
+        {lending && (
+          <div>
+            {stacked && <SectionLabel>Lending</SectionLabel>}
+            <LendingSection lending={lending} />
+          </div>
+        )}
+
+        {(hasBorrower || hasLending) && (
+          <div className="mt-4">
+            <ActivityList />
+          </div>
+        )}
+      </div>
     </DashboardLayout>
   );
 }

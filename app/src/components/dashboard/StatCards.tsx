@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { STAT_CARDS, type StatCard } from '@/lib/portfolio';
+import type { StatCard } from '@/lib/portfolio';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -10,7 +10,10 @@ const TONE: Record<StatCard['tone'], string> = {
   neutral: '#888780',
 };
 
-function Sparkline({ data, color }: { data: number[]; color: string }) {
+function Sparkline({ data, color }: { data?: number[]; color: string }) {
+  // A single point has no shape, and a flat line implies a trend that isn't there.
+  if (!data || data.length < 2) return null;
+
   const w = 68;
   const h = 26;
   const max = Math.max(...data);
@@ -36,12 +39,16 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-export default function StatCards() {
+/**
+ * Row of headline figures. Takes its cards so the same component can present borrower
+ * stats or lender stats — the shapes are identical, only the data differs.
+ */
+export default function StatCards({ cards }: { cards: StatCard[] }) {
   const colors = useTheme();
 
   return (
-    <div className="grid grid-cols-4 gap-4 mb-4">
-      {STAT_CARDS.map((stat, i) => {
+    <div className="grid grid-cols-4 gap-4">
+      {cards.map((stat, i) => {
         const tone = TONE[stat.tone];
         return (
           <motion.div
@@ -61,7 +68,6 @@ export default function StatCards() {
               </span>
               <Sparkline data={stat.series} color={tone} />
             </div>
-
             <div className="flex items-baseline gap-2">
               <span className="font-serif text-2xl font-semibold tabular-nums" style={{ color: colors.text }}>
                 {stat.value}
