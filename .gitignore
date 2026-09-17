@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# Dependencies and build output live under app/, which carries its own .gitignore.
+# Repeated here so the root still ignores them if the layout ever flattens.
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea

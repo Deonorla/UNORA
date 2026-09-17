@@ -1,0 +1,364 @@
+import { motion } from 'motion/react';
+import { useTheme } from '@/contexts/ThemeContext';
+import {
+  MONTHS,
+  BORROWED_SERIES,
+  REPAID_SERIES,
+  SCORE_SERIES,
+  ALLOCATION,
+  allocationTotal,
+  formatCompact,
+} from '@/lib/portfolio';
+
+const ease = [0.22, 1, 0.36, 1] as const;
+
+/** Shared card shell so the three panels line up. */
+function Panel({
+  title,
+  meta,
+  children,
+  delay = 0,
+}: {
+  title: string;
+  meta?: string;
+  children: React.ReactNode;
+  delay?: number;
+}) {
+  const colors = useTheme();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay, ease }}
+      className="rounded-2xl border shadow-sm p-5 flex flex-col h-full"
+      style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
+    >
+      <div className="flex items-center justify-between mb-5">
+        <span className="font-sans text-xs font-medium" style={{ color: colors.text }}>
+          {title}
+        </span>
+        {meta && (
+          <span
+            className="font-mono text-[9px] px-2 py-1 rounded-full"
+            style={{ backgroundColor: 'rgba(124,58,237,0.07)', color: '#7C3AED' }}
+          >
+            {meta}
+          </span>
+        )}
+      </div>
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * Mirrored bar chart: drawn principal above the axis, repaid principal below it.
+ * The gap between the two is the outstanding balance — which is the whole story of
+ * a credit line, so the two series share one scale rather than being normalised apart.
+ */
+export function BorrowRepayChart() {
+  const colors = useTheme();
+
+  const totalBorrowed = BORROWED_SERIES.reduce((a, b) => a + b, 0);
+  const totalRepaid = REPAID_SERIES.reduce((a, b) => a + b, 0);
+  const max = Math.max(...BORROWED_SERIES, ...REPAID_SERIES);
+
+  return (
+    <Panel title="Borrowed vs repaid" meta="Last 8 months" delay={0.25}>
+      {/* Drawn */}
+      <div className="text-center mb-3">
+        <div className="font-mono text-[9px] uppercase tracking-widest mb-0.5" style={{ color: colors.textMuted }}>
+          Drawn
+        </div>
+        <div className="font-serif text-3xl font-semibold tabular-nums" style={{ color: colors.text }}>
+          {formatCompact(totalBorrowed)}
+        </div>
+      </div>
+
+      {/* Bars — up for drawn, down for repaid. */}
+      <div className="flex items-end gap-1.5 h-[112px]">
+        {MONTHS.map((month, i) => (
+          <div key={month} className="flex-1 flex flex-col justify-end h-full">
+            <motion.div
+              className="w-full rounded-t-[3px]"
+              style={{ backgroundColor: '#7C3AED' }}
+              initial={{ height: 0 }}
+              animate={{ height: `${(BORROWED_SERIES[i] / max) * 100}%` }}
+              transition={{ duration: 0.7, delay: 0.35 + i * 0.04, ease }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Axis */}
+      <div className="flex items-center gap-1.5 my-1.5">
+        {MONTHS.map((month) => (
+          <div
+            key={month}
+            className="flex-1 text-center font-mono text-[8px] py-0.5"
+            style={{ color: colors.textMuted, borderTop: `1px solid ${colors.border}` }}
+          >
+            {month}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-start gap-1.5 h-[112px]">
+        {MONTHS.map((month, i) => (
+          <div key={month} className="flex-1 flex flex-col justify-start h-full">
+            <motion.div
+              className="w-full rounded-b-[3px]"
+              style={{ backgroundColor: '#A78BFA' }}
+              initial={{ height: 0 }}
+              animate={{ height: `${(REPAID_SERIES[i] / max) * 100}%` }}
+              transition={{ duration: 0.7, delay: 0.35 + i * 0.04, ease }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Repaid */}
+      <div className="text-center mt-3 pt-3 border-t" style={{ borderColor: colors.border }}>
+        <div className="font-mono text-[9px] uppercase tracking-widest mb-0.5" style={{ color: colors.textMuted }}>
+          Repaid
+        </div>
+        <div className="font-serif text-3xl font-semibold tabular-nums" style={{ color: colors.text }}>
+          {formatCompact(totalRepaid)}
+        </div>
+        <div className="font-mono text-[9px] mt-1" style={{ color: '#639922' }}>
+          {Math.round((totalRepaid / totalBorrowed) * 100)}% of everything drawn
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+/** Donut of where the wallet's USDC sits, all three being the same asset. */
+export function CollateralGauge() {
+  const colors = useTheme();
+
+  const total = allocationTotal();
+  const size = 148;
+  const stroke = 16;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  // Each slice is an arc offset by the sum of the slices before it. Computed purely —
+  // accumulating into a variable during the render map trips the React Compiler.
+  const fractions = ALLOCATION.map((slice) => slice.value / total);
+  const offsets = fractions.map((_, i) => fractions.slice(0, i).reduce((a, b) => a + b, 0));
+
+  return (
+    <Panel title="Capital allocation" meta={formatCompact(total)} delay={0.3}>
+      <div className="relative mx-auto" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(0,0,0,0.05)"
+            strokeWidth={stroke}
+          />
+          {ALLOCATION.map((slice, i) => {
+            const dash = fractions[i] * circumference;
+            const offset = offsets[i] * circumference;
+            return (
+              <motion.circle
+                key={slice.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth={stroke}
+                strokeLinecap="butt"
+                strokeDasharray={`${dash} ${circumference - dash}`}
+                initial={{ strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset: -offset }}
+                transition={{ duration: 0.9, delay: 0.4 + i * 0.1, ease }}
+              />
+            );
+          })}
+        </svg>
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-mono text-[8px] uppercase tracking-widest" style={{ color: colors.textMuted }}>
+            Total
+          </span>
+          <span className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>
+            {formatCompact(total)}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-auto pt-5 space-y-2.5">
+        {ALLOCATION.map((slice) => (
+          <div key={slice.label} className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
+            <div className="min-w-0 flex-1">
+              <div className="font-sans text-[11px]" style={{ color: colors.text }}>
+                {slice.label}
+              </div>
+              <div className="font-mono text-[9px]" style={{ color: colors.textMuted }}>
+                {slice.hint}
+              </div>
+            </div>
+            <span className="font-mono text-[10px] tabular-nums shrink-0" style={{ color: colors.text }}>
+              {Math.round((slice.value / total) * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+/** Catmull-Rom to cubic bezier, so the line flows instead of reading as a polyline. */
+function smoothPath(points: { x: number; y: number }[]): string {
+  if (points.length < 2) return '';
+  let d = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] ?? points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] ?? p2;
+    const c1x = p1.x + (p2.x - p0.x) / 6;
+    const c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6;
+    const c2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${c1x.toFixed(2)} ${c1y.toFixed(2)}, ${c2x.toFixed(2)} ${c2y.toFixed(2)}, ${p2.x} ${p2.y}`;
+  }
+  return d;
+}
+
+/**
+ * Score history.
+ *
+ * The y-axis is a fixed 40-100 band rather than the data range, so a four-point move
+ * doesn't render as a cliff — but it is labelled, because a silently cropped axis is
+ * how charts lie. Tier thresholds are drawn in so the climb has visible stakes.
+ */
+export function ScoreHistoryChart() {
+  const colors = useTheme();
+
+  const w = 420;
+  const h = 176;
+  const padX = 30;
+  const padY = 14;
+  const yMin = 40;
+  const yMax = 100;
+
+  const x = (i: number) => padX + (i / (SCORE_SERIES.length - 1)) * (w - padX - 10);
+  const y = (score: number) => padY + (1 - (score - yMin) / (yMax - yMin)) * (h - padY * 2);
+
+  const points = SCORE_SERIES.map((score, i) => ({ x: x(i), y: y(score) }));
+  const line = smoothPath(points);
+  const area = `${line} L ${x(SCORE_SERIES.length - 1)} ${h - padY} L ${x(0)} ${h - padY} Z`;
+
+  const thresholds = [
+    { score: 80, label: 'Prime', color: '#639922' },
+    { score: 65, label: 'Established', color: '#7C3AED' },
+  ];
+
+  const last = points[points.length - 1];
+
+  return (
+    <Panel title="Score history" meta="+14 pts" delay={0.35}>
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" role="img" aria-label="Credit score by month">
+        <defs>
+          <linearGradient id="score-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {/* Y axis ticks */}
+        {[40, 60, 80, 100].map((tick) => (
+          <g key={tick}>
+            <line
+              x1={padX}
+              y1={y(tick)}
+              x2={w - 10}
+              y2={y(tick)}
+              stroke={colors.border}
+              strokeWidth="1"
+            />
+            <text x={2} y={y(tick) + 3} fontSize="8" fill={colors.textMuted} fontFamily="monospace">
+              {tick}
+            </text>
+          </g>
+        ))}
+
+        {/* Tier thresholds */}
+        {thresholds.map((t) => (
+          <g key={t.label}>
+            <line
+              x1={padX}
+              y1={y(t.score)}
+              x2={w - 10}
+              y2={y(t.score)}
+              stroke={t.color}
+              strokeWidth="1"
+              strokeDasharray="3 4"
+              opacity="0.5"
+            />
+            <text
+              x={padX + 3}
+              y={y(t.score) - 4}
+              fontSize="8"
+              fill={t.color}
+              opacity="0.9"
+              fontFamily="monospace"
+            >
+              {t.label} {t.score}
+            </text>
+          </g>
+        ))}
+
+        <motion.path
+          d={area}
+          fill="url(#score-fill)"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+        />
+
+        <motion.path
+          d={line}
+          fill="none"
+          stroke="#7C3AED"
+          strokeWidth="2"
+          strokeLinecap="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.2, delay: 0.45, ease }}
+        />
+
+        {/* Current point */}
+        <motion.circle
+          cx={last.x}
+          cy={last.y}
+          r="4"
+          fill="#7C3AED"
+          stroke="#FFFFFF"
+          strokeWidth="2"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.4, delay: 1.5, ease }}
+        />
+      </svg>
+
+      <div
+        className="flex items-center justify-between mt-auto pt-3 border-t"
+        style={{ borderColor: colors.border }}
+      >
+        {MONTHS.map((month) => (
+          <span key={month} className="font-mono text-[8px]" style={{ color: colors.textMuted }}>
+            {month}
+          </span>
+        ))}
+      </div>
+    </Panel>
+  );
+}
