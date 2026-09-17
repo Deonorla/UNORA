@@ -40,7 +40,7 @@ const GROUPS: { label: string; items: Activity[] }[] = [
   {
     label: 'Yesterday',
     items: [
-      { name: 'Deposit', detail: 'Main pool — 4.20% APY', amount: '$500.00', kind: 'Deposit', time: '1d ago', color: '#7C3AED', Icon: ArrowDownToLine },
+      { name: 'Deposit', detail: 'General pool — 4.20% APY', amount: '$500.00', kind: 'Deposit', time: '1d ago', color: '#7C3AED', Icon: ArrowDownToLine },
       { name: 'Capacity delegated', detail: 'To T. Reyes', amount: '$3,000', kind: 'Sponsor', time: '1d ago', color: '#7C3AED', Icon: Handshake },
     ],
   },
@@ -48,7 +48,7 @@ const GROUPS: { label: string; items: Activity[] }[] = [
     label: 'Earlier',
     items: [
       { name: 'Default flagged', detail: 'A. Bello — stream stalled', amount: 'slashed', kind: 'Default', time: '4d ago', color: '#BA7517', Icon: ShieldAlert },
-      { name: 'Loan received', detail: 'Main pool — 4.20% APR', amount: '$5,000', kind: 'Borrowed', time: '5d ago', color: '#639922', Icon: Banknote },
+      { name: 'Loan received', detail: 'General pool — 4.20% APR', amount: '$5,000', kind: 'Borrowed', time: '5d ago', color: '#639922', Icon: Banknote },
     ],
   },
 ];

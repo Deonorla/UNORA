@@ -22,7 +22,7 @@ export interface Pool {
 export const POOLS: Pool[] = [
   {
     id: 'main',
-    name: 'Main',
+    name: 'General',
     description: 'Borrow against the widest range of assets in one general-purpose market.',
     riskNote: 'Open to every scored wallet. Collateral priced from your credit history.',
   },

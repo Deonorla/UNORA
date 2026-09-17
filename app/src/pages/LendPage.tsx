@@ -1,8 +1,10 @@
 import { motion } from 'motion/react';
+import { useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
 import { totalDeposits } from '@/lib/markets';
+import { positionDeposited, resolveWalletState } from '@/lib/position';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -70,10 +72,21 @@ function ApyBadge({ apy, trend, muted }: { apy: string; trend: string; muted?: b
 
 export default function LendPage() {
   const colors = useTheme();
+  const { search } = useLocation();
 
   // Weighted by size, and only across deployed reserves — an undeployed pool has no yield.
   const liveSize = liveReserves.reduce((sum, r) => sum + r.poolSize, 0);
   const weightedApy = liveReserves.reduce((sum, r) => sum + r.apyValue * r.poolSize, 0) / (liveSize || 1);
+
+  // The wallet's own deposit, read from the same position the dashboard renders so the
+  // two pages can't disagree about how much is supplied. Exact figures here, not the
+  // compact "$4K" — this is the number a depositor checks.
+  const { position } = resolveWalletState(search);
+  const deposited = position.lending ? positionDeposited(position.lending) : 0;
+  const balanceLabel =
+    deposited > 0
+      ? `$${deposited.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : '$0.00';
 
   return (
     <DashboardLayout>
@@ -103,7 +116,7 @@ export default function LendPage() {
             </div>
             <div className="p-4 rounded-2xl border shadow-sm" style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}>
               <div className="font-mono text-[9px] uppercase tracking-widest mb-1" style={{ color: colors.textMuted }}>Your deposits</div>
-              <div className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>$0.00</div>
+              <div className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>{balanceLabel}</div>
             </div>
           </motion.div>
 
@@ -177,10 +190,13 @@ export default function LendPage() {
                     )}
                   </div>
 
-                  {/* Your balance */}
+                  {/* Your balance — USDC is the only live reserve, so it carries the position. */}
                   <div className="text-right">
-                    <span className="font-mono text-xs tabular-nums" style={{ color: colors.textMuted }}>
-                      {isSoon ? '—' : '$0.00'}
+                    <span
+                      className="font-mono text-xs tabular-nums"
+                      style={{ color: deposited > 0 && !isSoon ? colors.text : colors.textMuted }}
+                    >
+                      {isSoon ? '—' : balanceLabel}
                     </span>
                   </div>
 
