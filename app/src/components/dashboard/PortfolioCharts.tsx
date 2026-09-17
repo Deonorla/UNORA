@@ -76,7 +76,7 @@ export function BorrowRepayChart() {
       </div>
 
       {/* Bars — up for drawn, down for repaid. */}
-      <div className="flex items-end gap-1.5 h-[112px]">
+      <div className="flex items-end gap-1.5 h-[96px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-end h-full">
             <motion.div
@@ -103,7 +103,7 @@ export function BorrowRepayChart() {
         ))}
       </div>
 
-      <div className="flex items-start gap-1.5 h-[112px]">
+      <div className="flex items-start gap-1.5 h-[96px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-start h-full">
             <motion.div
@@ -138,8 +138,8 @@ export function CollateralGauge() {
   const colors = useTheme();
 
   const total = allocationTotal();
-  const size = 148;
-  const stroke = 16;
+  const size = 172;
+  const stroke = 18;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
 
@@ -150,7 +150,8 @@ export function CollateralGauge() {
 
   return (
     <Panel title="Capital allocation" meta={formatCompact(total)} delay={0.3}>
-      <div className="relative mx-auto" style={{ width: size, height: size }}>
+      {/* my-auto centres it in the free space, so equal-height cards don't pool whitespace. */}
+      <div className="relative my-auto mx-auto" style={{ width: size, height: size }}>
         <svg width={size} height={size} className="-rotate-90">
           <circle
             cx={size / 2}
@@ -192,7 +193,7 @@ export function CollateralGauge() {
         </div>
       </div>
 
-      <div className="mt-auto pt-5 space-y-2.5">
+      <div className="pt-5 space-y-2.5">
         {ALLOCATION.map((slice) => (
           <div key={slice.label} className="flex items-center gap-2.5">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
@@ -243,7 +244,7 @@ export function ScoreHistoryChart() {
   const colors = useTheme();
 
   const w = 420;
-  const h = 176;
+  const h = 380;
   const padX = 30;
   const padY = 14;
   const yMin = 40;
@@ -265,7 +266,13 @@ export function ScoreHistoryChart() {
 
   return (
     <Panel title="Score history" meta="+14 pts" delay={0.35}>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" role="img" aria-label="Credit score by month">
+      {/* my-auto centres the plot in the free space — same reasoning as the gauge. */}
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="w-full h-auto my-auto"
+        role="img"
+        aria-label="Credit score by month"
+      >
         <defs>
           <linearGradient id="score-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.22" />
@@ -284,7 +291,7 @@ export function ScoreHistoryChart() {
               stroke={colors.border}
               strokeWidth="1"
             />
-            <text x={2} y={y(tick) + 3} fontSize="8" fill={colors.textMuted} fontFamily="monospace">
+            <text x={2} y={y(tick) + 4} fontSize="11" fill={colors.textMuted} fontFamily="monospace">
               {tick}
             </text>
           </g>
@@ -305,8 +312,8 @@ export function ScoreHistoryChart() {
             />
             <text
               x={padX + 3}
-              y={y(t.score) - 4}
-              fontSize="8"
+              y={y(t.score) - 6}
+              fontSize="11"
               fill={t.color}
               opacity="0.9"
               fontFamily="monospace"
@@ -350,7 +357,7 @@ export function ScoreHistoryChart() {
       </svg>
 
       <div
-        className="flex items-center justify-between mt-auto pt-3 border-t"
+        className="flex items-center justify-between mt-4 pt-3 border-t"
         style={{ borderColor: colors.border }}
       >
         {MONTHS.map((month) => (

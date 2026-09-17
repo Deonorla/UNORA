@@ -102,18 +102,23 @@ export const STAT_CARDS: StatCard[] = [
 /**
  * The tier ladder the score climbs. Mirrors `TIERS` in `lib/sponsorNetwork` so the
  * dashboard and the sponsor graph agree on what a score band is called.
+ *
+ * `state` is relative to the wallet's current score, not a property of the tier:
+ *   current — the rung the score sits on
+ *   cleared — a lower rung already passed, and still passed if the score dips a little
+ *   locked  — not yet reached
  */
+export type TierState = 'current' | 'cleared' | 'locked';
+
 export interface TierRung {
   name: string;
+  /** Score needed to reach this rung. */
   minScore: number;
   ratio: string;
   ceiling: string;
   color: string;
   fill: string;
-  /** True for the rung the wallet currently sits on. */
-  current?: boolean;
-  /** True for rungs not yet unlocked. */
-  locked?: boolean;
+  state: TierState;
 }
 
 export const TIER_LADDER: TierRung[] = [
@@ -124,7 +129,7 @@ export const TIER_LADDER: TierRung[] = [
     ceiling: '$25,000',
     color: '#639922',
     fill: '#E3E8D5',
-    locked: true,
+    state: 'locked',
   },
   {
     name: 'Established',
@@ -133,7 +138,7 @@ export const TIER_LADDER: TierRung[] = [
     ceiling: '$12,400',
     color: '#7C3AED',
     fill: '#E7DBF1',
-    current: true,
+    state: 'current',
   },
   {
     name: 'Building',
@@ -142,9 +147,17 @@ export const TIER_LADDER: TierRung[] = [
     ceiling: '$6,200',
     color: '#BA7517',
     fill: '#EFE3D3',
-    locked: true,
+    state: 'cleared',
   },
 ];
+
+/** Points still needed for the next rung up, or null if already at the top. */
+export function pointsToNextTier(score: number): { rung: TierRung; gap: number } | null {
+  const next = [...TIER_LADDER]
+    .filter((tier) => tier.minScore > score)
+    .sort((a, b) => a.minScore - b.minScore)[0];
+  return next ? { rung: next, gap: next.minScore - score } : null;
+}
 
 /** Compact money formatting — `$12.4K`. */
 export function formatCompact(value: number): string {
