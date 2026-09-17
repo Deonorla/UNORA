@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Users, ShieldAlert, ArrowUpRight, Network } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { shortAddress, explorerAddressUrl } from '@/lib/chains';
 import {
@@ -55,10 +55,7 @@ export default function SponsorGraphPage() {
   const selectedSponsored = SPONSOR_EDGES.filter((e) => e.sponsor === selectedId);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F5F2' }}>
-      <DashboardSidebar />
-
-      <main className="ml-60 min-h-screen">
+    <DashboardLayout>
         <PageHeader
           title="Sponsor graph"
           subtitle="Every edge is delegated capacity. If a sponsored wallet defaults, the sponsor's own capacity is slashed onchain — trust here has a price."
@@ -366,7 +363,6 @@ export default function SponsorGraphPage() {
             </motion.div>
           </div>
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

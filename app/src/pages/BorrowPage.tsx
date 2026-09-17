@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Search } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
 import MarketTable from '@/components/borrow/MarketTable';
 import BorrowFlow from '@/components/borrow/BorrowFlow';
@@ -79,10 +79,7 @@ export default function BorrowPage() {
   const isFiltered = poolFilter !== 'all' || query.trim() !== '';
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F5F2' }}>
-      <DashboardSidebar />
-
-      <main className="ml-60 min-h-screen">
+    <DashboardLayout>
         <PageHeader
           title="Borrow"
           subtitle="Borrow against your onchain credit history, not a fixed overcollateralised deposit. The better your record, the less you lock."
@@ -225,8 +222,7 @@ export default function BorrowPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }
 

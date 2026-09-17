@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
 import { totalDeposits } from '@/lib/markets';
 
@@ -76,10 +76,7 @@ export default function LendPage() {
   const weightedApy = liveReserves.reduce((sum, r) => sum + r.apyValue * r.poolSize, 0) / (liveSize || 1);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F5F2' }}>
-      <DashboardSidebar />
-
-      <main className="ml-60 min-h-screen">
+    <DashboardLayout>
         <PageHeader
           title="Deposit"
           subtitle="Supply assets to Unora pools and earn yield. Your deposits fund borrower credit lines backed by onchain reputation."
@@ -222,7 +219,6 @@ export default function LendPage() {
             })}
           </motion.div>
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

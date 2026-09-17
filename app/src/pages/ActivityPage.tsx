@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import DashboardSidebar from '@/components/dashboard/DashboardSidebar';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader from '@/components/dashboard/PageHeader';
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -86,10 +86,7 @@ export default function ActivityPage() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F8F5F2' }}>
-      <DashboardSidebar />
-
-      <main className="ml-60 min-h-screen">
+    <DashboardLayout>
         <PageHeader
           title="Activity"
           subtitle="Every protocol event on your wallet — stream ticks, repayments, score changes, and sponsorship movements."
@@ -208,7 +205,6 @@ export default function ActivityPage() {
             )}
           </motion.div>
         </div>
-      </main>
-    </div>
+    </DashboardLayout>
   );
 }

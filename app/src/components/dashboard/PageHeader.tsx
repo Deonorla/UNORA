@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import ConnectWalletButton from '@/components/ConnectWalletButton';
+import GlobalSearch from '@/components/dashboard/GlobalSearch';
 import { useUnoraWallet } from '@/hooks/useUnoraWallet';
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -78,7 +79,8 @@ export default function PageHeader({ title, subtitle, note, children, dense }: P
           {authenticated && note && <div className="mt-2.5">{note}</div>}
         </div>
 
-        <div className={`flex shrink-0 items-center ${dense ? 'gap-3' : 'gap-7'}`}>
+        <div className="flex shrink-0 items-center gap-3">
+          {authenticated && <GlobalSearch />}
           {authenticated && children}
           <ConnectWalletButton />
         </div>
