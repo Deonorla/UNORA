@@ -123,7 +123,7 @@ export const TIER_LADDER: TierRung[] = [
     ratio: '20%',
     ceiling: '$25,000',
     color: '#639922',
-    fill: 'rgba(99,153,34,0.10)',
+    fill: '#E3E8D5',
     locked: true,
   },
   {
@@ -132,7 +132,7 @@ export const TIER_LADDER: TierRung[] = [
     ratio: '35%',
     ceiling: '$12,400',
     color: '#7C3AED',
-    fill: 'rgba(124,58,237,0.10)',
+    fill: '#E7DBF1',
     current: true,
   },
   {
@@ -141,7 +141,7 @@ export const TIER_LADDER: TierRung[] = [
     ratio: '55%',
     ceiling: '$6,200',
     color: '#BA7517',
-    fill: 'rgba(186,117,23,0.10)',
+    fill: '#EFE3D3',
     locked: true,
   },
 ];

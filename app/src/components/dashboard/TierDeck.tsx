@@ -90,8 +90,6 @@ function TierCard({
       style={{
         backgroundColor: tier.fill,
         borderColor: isFront ? tier.color : borderColor,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
         cursor: isFront ? 'default' : 'pointer',
       }}
     >
