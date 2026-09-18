@@ -8,7 +8,7 @@ import { TIER_LADDER, pointsToNextTier, type TierRung, type TierState } from '@/
 const ease = [0.22, 1, 0.36, 1] as const;
 
 const CARD_W = 320;
-const CARD_H = 208;
+const CARD_H = 224;
 /**
  * Horizontal step between stacked cards, and therefore exactly how much of a side card
  * stays visible. Card content is left-aligned, so the step has to exceed the card's own
@@ -86,22 +86,23 @@ function TierCard({
   const scale = isFront ? 1 : 0.93 - (depth - 1) * 0.03;
   const rotate = side * depth * 4;
 
-  // The status line is the only place the wallet's own score appears on a side card.
+  // The status line is the only place the wallet's own score appears — the card's own
+  // numbers are all properties of the tier, so this is what ties it to you.
   const next = pointsToNextTier(SCORE.value);
   const status =
     tier.state === 'current'
-      ? `You are here at ${SCORE.value}`
+      ? `Your score: ${SCORE.value}`
       : tier.state === 'cleared'
-        ? `Cleared at ${tier.minScore}`
+        ? `Passed — you're above ${tier.minScore}`
         : next && next.rung.name === tier.name
-          ? `+${next.gap} pts to unlock`
+          ? `Needs ${next.gap} more points`
           : `Unlocks at ${tier.minScore}`;
 
   return (
     <motion.button
       type="button"
       onClick={onSelect}
-      aria-label={`${tier.name} tier — ${meta.label}, requires score ${tier.minScore}`}
+      aria-label={`${tier.name} tier — ${meta.label}. Score ${tier.minScore} to enter, ${tier.ratio} collateral, ${tier.ceiling} ceiling.`}
       initial={false}
       animate={{
         x: offsetX,
@@ -145,41 +146,43 @@ function TierCard({
         </div>
       </div>
 
-      {/* Tier name and the score bar it sits at */}
-      <div className="font-mono text-[9px] uppercase tracking-widest mb-1" style={{ color: '#6B6A66' }}>
-        {tier.name}
+      {/* Which tier, and where this wallet stands against it */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-serif text-2xl font-semibold" style={{ color: '#111111' }}>
+          {tier.name}
+        </span>
+        {tier.state === 'locked' && (
+          <ChevronUp className="w-4 h-4 shrink-0" style={{ color: meta.color }} strokeWidth={2} />
+        )}
+      </div>
+      <div className="font-mono text-[9px] mt-1" style={{ color: meta.color }}>
+        {status}
       </div>
 
-      <div className="flex items-baseline gap-1.5">
+      {/* The number the tier actually buys you — what you'd have to lock. */}
+      <div className="mt-auto flex items-baseline gap-2">
         <span
           className="font-serif text-4xl font-semibold tabular-nums leading-none"
           style={{ color: '#111111' }}
         >
-          {tier.minScore}
+          {tier.ratio}
         </span>
-        <span className="font-mono text-[10px]" style={{ color: '#6B6A66' }}>
-          /100
+        <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: '#6B6A66' }}>
+          collateral
         </span>
-        {tier.state === 'locked' && (
-          <ChevronUp className="w-3.5 h-3.5 ml-auto" style={{ color: meta.color }} strokeWidth={2} />
-        )}
       </div>
 
-      <div className="font-mono text-[9px] mt-1.5" style={{ color: meta.color }}>
-        {status}
-      </div>
-
-      {/* Terms at this rung */}
+      {/* What it takes to get here, and how much you could draw */}
       <div
-        className="flex items-center gap-7 mt-auto pt-3.5 border-t"
+        className="flex items-center gap-7 mt-3.5 pt-3.5 border-t"
         style={{ borderColor: `${tier.color}33` }}
       >
         <div>
           <div className="font-mono text-[8px] uppercase tracking-widest" style={{ color: '#6B6A66' }}>
-            Collateral
+            Entry score
           </div>
           <div className="font-mono text-sm tabular-nums" style={{ color: '#111111' }}>
-            {tier.ratio}
+            {tier.minScore}
           </div>
         </div>
         <div>
