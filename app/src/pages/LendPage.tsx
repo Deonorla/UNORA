@@ -5,6 +5,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
 import WithdrawDialog from '@/components/dashboard/WithdrawDialog';
+import TokenIcon from '@/components/TokenIcon';
 import { MARKETS, supplyApy, totalDeposits } from '@/lib/markets';
 import { positionDeposited, resolveWalletState } from '@/lib/position';
 
@@ -52,17 +53,6 @@ function formatUsd(value: number): string {
   if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(2)}M`;
   if (value >= 1_000) return `$${Math.round(value / 1_000)}K`;
   return `$${value.toFixed(2)}`;
-}
-
-function AssetIcon({ symbol, color }: { symbol: string; color: string }) {
-  return (
-    <div
-      className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-[11px] font-medium"
-      style={{ backgroundColor: `${color}18`, color }}
-    >
-      {symbol.charAt(0).toUpperCase()}
-    </div>
-  );
 }
 
 function ApyBadge({ apy, trend, muted }: { apy: string; trend: string; muted?: boolean }) {
@@ -176,7 +166,7 @@ export default function LendPage() {
                 >
                   {/* Asset */}
                   <div className="flex items-center gap-3 min-w-0">
-                    <AssetIcon symbol={reserve.symbol} color={reserve.color} />
+                    <TokenIcon symbol={reserve.symbol} color={reserve.color} />
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="font-sans text-xs font-medium" style={{ color: colors.text }}>

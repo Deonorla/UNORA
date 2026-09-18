@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import BorrowStepper from '@/components/borrow/BorrowStepper';
+import TokenIcon from '@/components/TokenIcon';
 import LoanRequestStep from '@/components/borrow/LoanRequestStep';
 import CollateralLockStep from '@/components/borrow/CollateralLockStep';
 import LoanActiveStep from '@/components/borrow/LoanActiveStep';
@@ -59,12 +60,7 @@ export default function BorrowFlow({ market, isCorrectNetwork, onBack }: Props) 
         </button>
 
         <div className="flex items-center gap-3">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center font-mono text-[11px] font-medium"
-            style={{ backgroundColor: `${market.accent}18`, color: market.accent }}
-          >
-            {market.symbol.charAt(0).toUpperCase()}
-          </div>
+          <TokenIcon symbol={market.symbol} color={market.accent} size={28} />
           <div className="text-right">
             <div className="font-sans text-xs font-medium" style={{ color: colors.text }}>
               {market.symbol}

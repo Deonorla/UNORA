@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { ArrowUpRight, Lock } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import TokenIcon from '@/components/TokenIcon';
 import {
   formatApr,
   formatCompactUsd,
@@ -60,12 +61,7 @@ export default function MarketTable({ markets, score, onSelect, onRequireWallet 
           >
             {/* Asset */}
             <div className="flex items-center gap-3 min-w-0">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-mono text-[11px] font-medium"
-                style={{ backgroundColor: `${market.accent}18`, color: market.accent }}
-              >
-                {market.symbol.charAt(0).toUpperCase()}
-              </div>
+              <TokenIcon symbol={market.symbol} color={market.accent} />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-sans text-xs font-medium" style={{ color: colors.text }}>
