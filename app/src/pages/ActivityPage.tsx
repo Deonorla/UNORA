@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader from '@/components/dashboard/PageHeader';
-import { ACTIVITY, KIND_META, type ActivityKind } from '@/lib/activity';
+import TokenIcon from '@/components/TokenIcon';
+import { ACTIVITY, KIND_META, tokenAccent, type ActivityKind } from '@/lib/activity';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -110,6 +111,7 @@ export default function ActivityPage() {
               {visible.map((event, i) => {
                 const meta = KIND_META[event.kind];
                 const Icon = meta.Icon;
+                const accent = event.symbol ? tokenAccent(event.symbol) : meta.color;
                 return (
                   <motion.div
                     key={`${event.kind}-${event.age}`}
@@ -122,19 +124,39 @@ export default function ActivityPage() {
                     style={{ borderColor: colors.border }}
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${meta.color}15` }}
-                      >
-                        <Icon className="w-4 h-4" style={{ color: meta.color }} strokeWidth={1.5} />
-                      </div>
+                      {/* The token that moved, where one did. Non-transfer events keep the
+                          kind's icon rather than being badged with an asset they didn't touch. */}
+                      {event.symbol ? (
+                        <TokenIcon symbol={event.symbol} color={accent} size={36} />
+                      ) : (
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: `${meta.color}15` }}
+                        >
+                          <Icon className="w-4 h-4" style={{ color: meta.color }} strokeWidth={1.5} />
+                        </div>
+                      )}
                       <div className="min-w-0">
-                        <div className="font-sans text-xs font-medium" style={{ color: colors.text }}>{event.name}</div>
-                        <div className="font-mono text-[9px] truncate" style={{ color: colors.textMuted }}>{event.detail}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-sans text-xs font-medium" style={{ color: colors.text }}>
+                            {event.name}
+                          </span>
+                          {event.symbol && (
+                            <span
+                              className="font-mono text-[8px] px-1.5 py-0.5 rounded shrink-0"
+                              style={{ backgroundColor: `${accent}18`, color: accent }}
+                            >
+                              {event.symbol}
+                            </span>
+                          )}
+                        </div>
+                        <div className="font-mono text-[9px] truncate" style={{ color: colors.textMuted }}>
+                          {event.detail}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="font-mono text-xs text-right" style={{ color: meta.color }}>
+                    <div className="font-mono text-xs text-right" style={{ color: accent }}>
                       {event.amount}
                     </div>
 

@@ -2,11 +2,13 @@ import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import TokenIcon from '@/components/TokenIcon';
 import {
   GROUP_ORDER,
   KIND_META,
   groupFor,
   recentActivity,
+  tokenAccent,
   type ActivityGroupLabel,
 } from '@/lib/activity';
 
@@ -93,6 +95,7 @@ export default function ActivityList() {
               {group.items.map((event, ii) => {
                 const meta = KIND_META[event.kind];
                 const Icon = meta.Icon;
+                const accent = event.symbol ? tokenAccent(event.symbol) : meta.color;
                 return (
                   <motion.div
                     key={`${event.kind}-${event.age}`}
@@ -102,18 +105,36 @@ export default function ActivityList() {
                     className="flex items-center justify-between gap-3 px-2 py-2.5 rounded-xl transition-colors hover:bg-purple-50/30"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                        style={{ backgroundColor: `${meta.color}15` }}
-                      >
-                        <Icon className="w-4 h-4" style={{ color: meta.color }} strokeWidth={1.5} />
-                      </div>
-                      <div className="min-w-0">
+                      {/* The token that moved, where one did. Events that aren't transfers —
+                          a score update, a capacity delegation — keep the kind's own icon
+                          rather than being badged with an asset they didn't touch. */}
+                      {event.symbol ? (
+                        <TokenIcon symbol={event.symbol} color={accent} size={36} />
+                      ) : (
                         <div
-                          className="font-sans text-xs font-medium truncate"
-                          style={{ color: colors.text }}
+                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ backgroundColor: `${meta.color}15` }}
                         >
-                          {event.name}
+                          <Icon className="w-4 h-4" style={{ color: meta.color }} strokeWidth={1.5} />
+                        </div>
+                      )}
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="font-sans text-xs font-medium truncate"
+                            style={{ color: colors.text }}
+                          >
+                            {event.name}
+                          </span>
+                          {event.symbol && (
+                            <span
+                              className="font-mono text-[8px] px-1.5 py-0.5 rounded shrink-0"
+                              style={{ backgroundColor: `${accent}18`, color: accent }}
+                            >
+                              {event.symbol}
+                            </span>
+                          )}
                         </div>
                         <div
                           className="font-mono text-[9px] truncate"
@@ -125,7 +146,7 @@ export default function ActivityList() {
                     </div>
 
                     <div className="text-right shrink-0">
-                      <div className="font-mono text-xs tabular-nums" style={{ color: meta.color }}>
+                      <div className="font-mono text-xs tabular-nums" style={{ color: accent }}>
                         {event.amount}
                       </div>
                       <div className="font-mono text-[8px]" style={{ color: colors.textMuted }}>
