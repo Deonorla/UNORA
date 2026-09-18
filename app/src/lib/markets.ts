@@ -111,6 +111,53 @@ export function reserveBufferOf(market: Market): number {
   return 1 - utilizationOf(market);
 }
 
+/**
+ * Two-slope rate model, kinked at the optimal utilization — the standard shape, and the one
+ * Aave draws on its reserve pages.
+ *
+ * Below the kink, rates rise gently so borrowing stays cheap while the pool has slack. Above
+ * it, rates rise steeply to pull in supply and push out demand before the pool runs dry.
+ *
+ * Tuned so the curve reproduces the USDC market's current figures exactly: at 72.09%
+ * utilization it returns 4.20% borrow APR and 2.72% supply APY, matching `baseApr` and
+ * `supplyApy`. If those drift apart, this is the thing to re-tune.
+ */
+export const RATE_MODEL = {
+  /** Utilization at which the curve kinks. */
+  optimalUtilization: 0.8,
+  /** Borrow APR at zero utilization. */
+  baseRate: 0.01,
+  /** APR added between zero and the kink. */
+  slope1: 0.0355,
+  /** APR added between the kink and 100% utilization. */
+  slope2: 0.6,
+};
+
+/** Borrow APR at an arbitrary utilization, per the two-slope model. */
+export function borrowAprAt(utilization: number): number {
+  const { optimalUtilization, baseRate, slope1, slope2 } = RATE_MODEL;
+  if (utilization <= optimalUtilization) {
+    return baseRate + (utilization / optimalUtilization) * slope1;
+  }
+  const excess = (utilization - optimalUtilization) / (1 - optimalUtilization);
+  return baseRate + slope1 + excess * slope2;
+}
+
+/** Supply APY at an arbitrary utilization — the same derivation as `supplyApy`. */
+export function supplyApyAt(utilization: number): number {
+  return borrowAprAt(utilization) * utilization * (1 - RESERVE_FACTOR);
+}
+
+/** Total deposits in a market: what has been lent, plus what is still idle. */
+export function marketDeposits(market: Market): number {
+  return market.totalBorrows + market.liquidity;
+}
+
+/** Cap on total deposits. Supply is rejected above this — a real constraint on the page. */
+export function supplyCap(market: Market): number {
+  return Math.round(marketDeposits(market) * 1.25);
+}
+
 /** Undrawn deposits across every live pool. */
 export function totalLiquidity(): number {
   return liveMarkets().reduce((sum, m) => sum + m.liquidity, 0);

@@ -5,6 +5,7 @@ import Web3Provider from '@/providers/Web3Provider';
 import LandingPage from '@/pages/LandingPage';
 import LendPage from '@/pages/LendPage';
 import BorrowPage from '@/pages/BorrowPage';
+import MarketDetailPage from '@/pages/MarketDetailPage';
 import Dashboard from '@/pages/Dashboard';
 import ActivityPage from '@/pages/ActivityPage';
 import SponsorGraphPage from '@/pages/SponsorGraphPage';
@@ -27,6 +28,7 @@ export default function App() {
               <Route path="/" element={<LandingPage ready={!loading} />} />
               <Route path="/lend" element={<LendPage />} />
               <Route path="/borrow" element={<BorrowPage />} />
+              <Route path="/borrow/:symbol" element={<MarketDetailPage />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/activity" element={<ActivityPage />} />
               <Route path="/sponsor/graph" element={<SponsorGraphPage />} />

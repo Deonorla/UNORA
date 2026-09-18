@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
 import { ArrowUpRight, Lock } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import TokenIcon from '@/components/TokenIcon';
@@ -59,14 +60,18 @@ export default function MarketTable({ markets, score, onSelect, onRequireWallet 
             className="grid grid-cols-[1.9fr_0.7fr_0.8fr_1fr_1fr_120px] gap-4 px-6 py-4 border-b last:border-b-0 items-center transition-colors hover:bg-purple-50/30"
             style={{ borderColor: colors.border, opacity: isSoon ? 0.6 : 1 }}
           >
-            {/* Asset */}
+            {/* Asset — the name links to the market's detail page */}
             <div className="flex items-center gap-3 min-w-0">
               <TokenIcon symbol={market.symbol} color={market.accent} />
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-sans text-xs font-medium" style={{ color: colors.text }}>
+                  <Link
+                    to={`/borrow/${market.symbol}`}
+                    className="font-sans text-xs font-medium hover:underline underline-offset-2"
+                    style={{ color: colors.text }}
+                  >
                     {market.symbol}
-                  </span>
+                  </Link>
                   {!isSoon && (
                     <span className="flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#639922' }} />
