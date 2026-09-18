@@ -10,11 +10,15 @@ import Dashboard from '@/pages/Dashboard';
 import ActivityPage from '@/pages/ActivityPage';
 import SponsorGraphPage from '@/pages/SponsorGraphPage';
 import LoadingScreen from '@/components/LoadingScreen';
+import { hasSeenIntro, markIntroSeen } from '@/lib/intro';
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
+  // The intro is a first-impression moment, not a loading state, so a returning visitor
+  // starts with it already dismissed rather than watching it again on every reload.
+  const [loading, setLoading] = useState(() => !hasSeenIntro());
 
   const handleComplete = useCallback(() => {
+    markIntroSeen();
     setLoading(false);
   }, []);
 
