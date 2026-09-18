@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
@@ -23,8 +24,16 @@ import { positionValue, resolveWalletState } from '@/lib/position';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-/** Columns: asset, APY, total supplied, capacity filled, available, your balance, action. */
-const GRID = 'grid-cols-[1.9fr_0.7fr_1fr_1.3fr_1.2fr_0.9fr_110px]';
+/**
+ * Columns: asset, APY, total supplied, capacity filled, available, your balance, action.
+ *
+ * Numeric columns are fixed-width and right-aligned. With `fr` widths a number sits at the
+ * left of a too-wide column, so the gap to the next column reads as uneven even though the
+ * gap is constant — right-aligning makes every value hug the same edge and the spacing reads
+ * true. Only the asset column flexes.
+ */
+const GRID =
+  'grid-cols-[minmax(0,1.5fr)_76px_112px_120px_96px_112px_150px]';
 
 function formatExactUsd(value: number): string {
   return `$${value.toLocaleString('en-US', {
@@ -43,24 +52,22 @@ function formatExactUsd(value: number): string {
 function CapacityBar({ filled, tone }: { filled: number; tone: string }) {
   const colors = useTheme();
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-1.5">
-        <div
-          className="flex-1 h-1 rounded-full overflow-hidden"
-          style={{ backgroundColor: 'rgba(0,0,0,0.06)' }}
-        >
-          <motion.div
-            className="h-full rounded-full"
-            style={{ backgroundColor: tone }}
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(filled, 1) * 100}%` }}
-            transition={{ duration: 0.8, delay: 0.3, ease }}
-          />
-        </div>
-        <span className="font-mono text-[10px] tabular-nums shrink-0" style={{ color: colors.textMuted }}>
-          {Math.round(filled * 100)}%
-        </span>
+    <div className="flex items-center justify-end gap-2">
+      <div
+        className="w-12 h-1 rounded-full overflow-hidden shrink-0"
+        style={{ backgroundColor: 'rgba(0,0,0,0.06)' }}
+      >
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: tone }}
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(filled, 1) * 100}%` }}
+          transition={{ duration: 0.8, delay: 0.3, ease }}
+        />
       </div>
+      <span className="font-mono text-[10px] tabular-nums w-8 text-right" style={{ color: colors.textMuted }}>
+        {Math.round(filled * 100)}%
+      </span>
     </div>
   );
 }
@@ -276,12 +283,12 @@ export default function LendPage() {
                   style={{ borderColor: colors.border, color: colors.textMuted }}
                 >
                   <span>Asset</span>
-                  <span>APY</span>
+                  <span className="text-right">APY</span>
                   <span className="text-right">Total supplied</span>
-                  <span>Capacity filled</span>
+                  <span className="text-right">Capacity</span>
                   <span className="text-right">Available</span>
                   <span className="text-right">Your balance</span>
-                  <span />
+                  <span className="text-right">Actions</span>
                 </div>
 
                 {markets.map((market) => {
@@ -334,7 +341,7 @@ export default function LendPage() {
                           derive a supply rate from, and showing the borrow rate here was
                           the same bug already fixed on the borrow page. */}
                       <div
-                        className="font-mono text-sm tabular-nums"
+                        className="font-mono text-sm tabular-nums text-right"
                         style={{ color: isSoon ? colors.textMuted : '#639922' }}
                       >
                         {isSoon ? '—' : formatApr(supplyApy(market))}
@@ -354,8 +361,8 @@ export default function LendPage() {
                         )}
                       </div>
 
-                      {/* Capacity filled */}
-                      <div>
+                      {/* Capacity */}
+                      <div className="text-right">
                         {isSoon ? (
                           <span className="font-mono text-[10px]" style={{ color: colors.textMuted }}>
                             —
@@ -383,8 +390,23 @@ export default function LendPage() {
                         </span>
                       </div>
 
-                      {/* Action */}
-                      <div className="flex justify-end">
+                      {/* Actions. The detail link is always present, including for
+                          undeployed reserves — the roadmap page is still worth reading. */}
+                      <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/borrow/${market.symbol}`}
+                          aria-label={`View ${market.symbol} details`}
+                          title="View details"
+                          className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-white shrink-0"
+                          style={{ borderColor: colors.border }}
+                        >
+                          <ArrowUpRight
+                            className="w-3.5 h-3.5"
+                            style={{ color: colors.textMuted }}
+                            strokeWidth={1.5}
+                          />
+                        </Link>
+
                         {isSoon ? (
                           <span
                             className="px-3 py-2 rounded-lg font-mono text-[9px] uppercase tracking-widest whitespace-nowrap"
