@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
+import WithdrawDialog from '@/components/dashboard/WithdrawDialog';
 import { MARKETS, supplyApy, totalDeposits } from '@/lib/markets';
 import { positionDeposited, resolveWalletState } from '@/lib/position';
 
@@ -93,6 +95,8 @@ export default function LendPage() {
       ? `$${deposited.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
       : '$0.00';
 
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+
   return (
     <DashboardLayout>
         <PageHeader
@@ -119,9 +123,22 @@ export default function LendPage() {
                 {(weightedApy * 100).toFixed(2)}%
               </div>
             </div>
-            <div className="p-4 rounded-2xl border shadow-sm" style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}>
-              <div className="font-mono text-[9px] uppercase tracking-widest mb-1" style={{ color: colors.textMuted }}>Your deposits</div>
-              <div className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>{balanceLabel}</div>
+            <div className="p-4 rounded-2xl border shadow-sm flex items-start justify-between gap-3" style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}>
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-widest mb-1" style={{ color: colors.textMuted }}>Your deposits</div>
+                <div className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>{balanceLabel}</div>
+              </div>
+              {/* Withdraw lives here, beside the balance it acts on — not on the dashboard,
+                  which reports rather than transacts. */}
+              {position.lending && (
+                <button
+                  onClick={() => setWithdrawOpen(true)}
+                  className="px-3.5 py-2 rounded-lg font-sans text-xs font-medium transition-all hover:opacity-90 shrink-0"
+                  style={{ backgroundColor: '#7C3AED', color: '#FFFFFF' }}
+                >
+                  Withdraw
+                </button>
+              )}
             </div>
           </motion.div>
 
@@ -240,6 +257,10 @@ export default function LendPage() {
             })}
           </motion.div>
         </div>
+
+        {withdrawOpen && position.lending && (
+          <WithdrawDialog lending={position.lending} onClose={() => setWithdrawOpen(false)} />
+        )}
     </DashboardLayout>
   );
 }

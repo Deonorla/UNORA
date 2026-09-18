@@ -19,6 +19,9 @@ function usd(value: number, digits = 0): string {
  * subtract them, net the two into a single set of headline figures. Net position is the
  * headline; the rest explain how it is moving.
  *
+ * Four standalone cards rather than one divided strip — the strip read as a single object
+ * and made the figures look like columns of a table, when each is its own metric.
+ *
  * The fourth figure is the wallet's risk metric, and it differs by side. A borrower's
  * exposure is a score downgrade raising the collateral ratio against a fixed loan, so they
  * get score buffer. A lender's exposure is idle capital, so they get the reserve buffer.
@@ -71,18 +74,15 @@ export default function NetSummary({ position }: { position: WalletPosition }) {
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.08, ease }}
-      className="rounded-2xl border shadow-sm mb-4 grid grid-cols-4"
-      style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
-    >
+    <div className="grid grid-cols-4 gap-4 mb-4">
       {figures.map((figure, i) => (
-        <div
+        <motion.div
           key={figure.label}
-          className={`px-5 py-4 ${i > 0 ? 'border-l' : ''}`}
-          style={{ borderColor: colors.border }}
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.08 + i * 0.04, ease }}
+          className="rounded-2xl border shadow-sm p-4"
+          style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
         >
           <div
             className="font-mono text-[9px] uppercase tracking-widest mb-2"
@@ -90,14 +90,20 @@ export default function NetSummary({ position }: { position: WalletPosition }) {
           >
             {figure.label}
           </div>
-          <div className="font-serif text-2xl font-semibold tabular-nums" style={{ color: figure.tone }}>
+          <div
+            className="font-serif text-2xl font-semibold tabular-nums leading-none"
+            style={{ color: figure.tone }}
+          >
             {figure.value}
           </div>
-          <div className="font-mono text-[9px] mt-1 leading-relaxed" style={{ color: colors.textMuted }}>
+          <div
+            className="font-mono text-[9px] mt-1.5 leading-relaxed"
+            style={{ color: colors.textMuted }}
+          >
             {figure.hint}
           </div>
-        </div>
+        </motion.div>
       ))}
-    </motion.div>
+    </div>
   );
 }

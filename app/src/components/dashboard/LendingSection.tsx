@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AllocationDonut } from '@/components/dashboard/PortfolioCharts';
-import { poolName, positionValue, type LendingPosition } from '@/lib/position';
+import { poolName, type LendingPosition } from '@/lib/position';
 import type { PoolId } from '@/lib/markets';
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -25,8 +24,7 @@ function formatPct(value: number, digits = 1): string {
 }
 
 /**
- * Pool health plus the withdraw action — the lender's risk figure and the lender's action,
- * which is all this section needs to be.
+ * Pool health — the lender's risk figure, and purely informational.
  *
  * Utilization and reserve buffer are the same number from two sides, but lenders look for
  * both, so both are shown. Utilization is the risk figure: the higher it is, the more of
@@ -34,10 +32,7 @@ function formatPct(value: number, digits = 1): string {
  */
 function PoolHealthCard({ lending }: { lending: LendingPosition }) {
   const colors = useTheme();
-  const [confirming, setConfirming] = useState(false);
-  const [withdrawn, setWithdrawn] = useState(false);
 
-  const value = positionValue(lending);
   const { utilization, reserveBuffer } = lending.health;
 
   // Utilization is weighted across holdings, so name the pool only when there is one.
@@ -117,50 +112,8 @@ function PoolHealthCard({ lending }: { lending: LendingPosition }) {
         ))}
       </div>
 
-      {/* Withdraw */}
-      <div className="pt-5">
-        {withdrawn ? (
-          <div
-            className="p-3 rounded-xl text-center font-sans text-xs"
-            style={{ backgroundColor: 'rgba(99,153,34,0.08)', color: '#4F7A1B' }}
-          >
-            Withdrawal of {formatUsd(value, 2)} submitted
-          </div>
-        ) : confirming ? (
-          <div className="space-y-2">
-            <div className="font-sans text-xs text-center" style={{ color: colors.textSecondary }}>
-              Withdraw all {formatUsd(value, 2)}?
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setConfirming(false)}
-                className="flex-1 px-4 py-2.5 rounded-xl border font-sans text-xs font-medium transition-colors hover:bg-white"
-                style={{ borderColor: colors.border, color: colors.textSecondary }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setWithdrawn(true);
-                  setConfirming(false);
-                }}
-                className="flex-1 px-4 py-2.5 rounded-xl font-sans text-xs font-medium transition-all hover:opacity-90"
-                style={{ backgroundColor: '#7C3AED', color: '#FFFFFF' }}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setConfirming(true)}
-            className="w-full px-5 py-3 rounded-xl font-sans text-sm font-medium transition-all hover:opacity-90"
-            style={{ backgroundColor: '#7C3AED', color: '#FFFFFF' }}
-          >
-            Withdraw
-          </button>
-        )}
-      </div>
+      {/* No action here on purpose. The dashboard reports; withdrawing is a transaction and
+          lives on the Deposit page, next to the balance it acts on. */}
     </motion.div>
   );
 }
