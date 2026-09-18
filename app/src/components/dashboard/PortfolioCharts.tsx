@@ -43,33 +43,71 @@ export function Panel({
 /*  Chart bodies — no panel, so a toggle can swap between them                 */
 /* -------------------------------------------------------------------------- */
 
+export interface AnchorMetric {
+  label: string;
+  value: string;
+  /** Defaults to body text. */
+  tone?: string;
+}
+
+/**
+ * The two-figure header that sits above every chart body.
+ *
+ * Shared so all three History tabs open the same way — a primary figure on the left, a
+ * supporting one on the right, then the plot. Without it the mirrored bar chart's totals
+ * floated in whitespace while the line tabs had nothing at all to anchor the curve to.
+ */
+export function ChartAnchor({ left, right }: { left: AnchorMetric; right: AnchorMetric }) {
+  const colors = useTheme();
+  return (
+    <div className="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <div
+          className="font-mono text-[9px] uppercase tracking-widest mb-1"
+          style={{ color: colors.textMuted }}
+        >
+          {left.label}
+        </div>
+        <div
+          className="font-serif text-3xl font-semibold tabular-nums leading-none"
+          style={{ color: colors.text }}
+        >
+          {left.value}
+        </div>
+      </div>
+      <div className="text-right">
+        <div
+          className="font-mono text-[9px] uppercase tracking-widest mb-1"
+          style={{ color: colors.textMuted }}
+        >
+          {right.label}
+        </div>
+        <div
+          className="font-mono text-sm tabular-nums"
+          style={{ color: right.tone ?? colors.text }}
+        >
+          {right.value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Mirrored bar chart: drawn principal above the axis, repaid principal below it.
  * The gap between the two is the outstanding balance — which is the whole story of a
  * credit line, so the two series share one scale rather than being normalised apart.
+ *
+ * Totals live in the `ChartAnchor` above, not in the body, so this tab is built the same
+ * way as the two line tabs.
  */
 export function BorrowRepayBody() {
   const colors = useTheme();
-
-  const totalBorrowed = BORROWED_SERIES.reduce((a, b) => a + b, 0);
-  const totalRepaid = REPAID_SERIES.reduce((a, b) => a + b, 0);
   const max = Math.max(...BORROWED_SERIES, ...REPAID_SERIES);
 
   return (
     <div className="flex flex-col flex-1">
-      <div className="text-center mb-3">
-        <div
-          className="font-mono text-[9px] uppercase tracking-widest mb-0.5"
-          style={{ color: colors.textMuted }}
-        >
-          Drawn
-        </div>
-        <div className="font-serif text-3xl font-semibold tabular-nums" style={{ color: colors.text }}>
-          {formatCompact(totalBorrowed)}
-        </div>
-      </div>
-
-      <div className="flex items-end gap-1.5 h-[120px]">
+      <div className="flex items-end gap-1.5 flex-1 min-h-[130px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-end h-full">
             <motion.div
@@ -95,7 +133,7 @@ export function BorrowRepayBody() {
         ))}
       </div>
 
-      <div className="flex items-start gap-1.5 h-[120px]">
+      <div className="flex items-start gap-1.5 flex-1 min-h-[130px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-start h-full">
             <motion.div
@@ -107,21 +145,6 @@ export function BorrowRepayBody() {
             />
           </div>
         ))}
-      </div>
-
-      <div className="text-center mt-3 pt-3 border-t" style={{ borderColor: colors.border }}>
-        <div
-          className="font-mono text-[9px] uppercase tracking-widest mb-0.5"
-          style={{ color: colors.textMuted }}
-        >
-          Repaid
-        </div>
-        <div className="font-serif text-3xl font-semibold tabular-nums" style={{ color: colors.text }}>
-          {formatCompact(totalRepaid)}
-        </div>
-        <div className="font-mono text-[9px] mt-1" style={{ color: '#639922' }}>
-          {Math.round((totalRepaid / totalBorrowed) * 100)}% of everything drawn
-        </div>
       </div>
     </div>
   );

@@ -4,6 +4,8 @@ import {
   LayoutDashboard,
   ArrowUpRight,
   ArrowDownLeft,
+  ArrowDownToLine,
+  ArrowUpFromLine,
   Clock,
   Users,
   Zap,
@@ -26,11 +28,35 @@ const navItems = [
   { icon: Users, label: 'Sponsors', path: '/sponsor/graph' },
 ];
 
-const actionItems = [
-  { icon: Zap, label: 'Request Loan', path: '/borrow' },
-  { icon: Lock, label: 'Lock Collateral', path: '/borrow' },
-  { icon: BarChart3, label: 'View Score History', path: '/dashboard' },
-  { icon: Link2, label: 'Sponsor Someone', path: '/sponsor/graph' },
+/**
+ * Secondary actions, grouped by which side of the protocol they belong to.
+ *
+ * Flat, the list read as if Unora were borrow-only — every entry was borrower-facing, and a
+ * lender had no top-level route to deposit or withdraw even though those are core actions.
+ * The labels are hidden on the collapsed rail, where the icons stand alone with tooltips.
+ */
+const actionGroups = [
+  {
+    label: 'Borrow',
+    items: [
+      { icon: Zap, label: 'Request Loan', path: '/borrow' },
+      { icon: Lock, label: 'Lock Collateral', path: '/borrow' },
+    ],
+  },
+  {
+    label: 'Lend',
+    items: [
+      { icon: ArrowDownToLine, label: 'Deposit', path: '/lend' },
+      { icon: ArrowUpFromLine, label: 'Withdraw', path: '/lend' },
+    ],
+  },
+  {
+    label: 'Reputation',
+    items: [
+      { icon: BarChart3, label: 'Score History', path: '/dashboard' },
+      { icon: Link2, label: 'Sponsor Someone', path: '/sponsor/graph' },
+    ],
+  },
 ];
 
 interface Props {
@@ -115,28 +141,49 @@ export default function DashboardSidebar({ collapsed, onToggle }: Props) {
 
         <div className="h-px mb-4" style={{ backgroundColor: colors.border }} />
 
-        {/* Secondary actions */}
-        <div className="space-y-1.5">
-          {actionItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.label}
-                to={item.path}
-                title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center rounded-xl transition-colors hover:bg-white/60 ${
-                  collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'
-                }`}
-              >
-                <Icon className="w-4 h-4 shrink-0" style={{ color: colors.textMuted }} strokeWidth={1.5} />
-                {!collapsed && (
-                  <span className="font-sans text-xs whitespace-nowrap" style={{ color: colors.textSecondary }}>
-                    {item.label}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+        {/* Secondary actions, grouped by side of the protocol */}
+        <div className="space-y-5">
+          {actionGroups.map((group) => (
+            <div key={group.label}>
+              {!collapsed && (
+                <div
+                  className="font-mono text-[9px] uppercase tracking-widest px-3 mb-2"
+                  style={{ color: colors.textMuted }}
+                >
+                  {group.label}
+                </div>
+              )}
+              <div className="space-y-1.5">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.label}
+                      to={item.path}
+                      title={collapsed ? item.label : undefined}
+                      className={`w-full flex items-center rounded-xl transition-colors hover:bg-white/60 ${
+                        collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'
+                      }`}
+                    >
+                      <Icon
+                        className="w-4 h-4 shrink-0"
+                        style={{ color: colors.textMuted }}
+                        strokeWidth={1.5}
+                      />
+                      {!collapsed && (
+                        <span
+                          className="font-sans text-xs whitespace-nowrap"
+                          style={{ color: colors.textSecondary }}
+                        >
+                          {item.label}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       </nav>
 

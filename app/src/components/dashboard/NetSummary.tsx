@@ -56,13 +56,15 @@ export default function NetSummary({ position }: { position: WalletPosition }) {
         net.netApy === null
           ? '—'
           : `${net.netApy >= 0 ? '+' : ''}${(net.netApy * 100).toFixed(2)}%`,
-      hint: net.netApy === null ? 'no net assets to rate' : 'yield earned less interest paid',
+      // Forward-looking and annualised. Spelled out because it is NOT the rate that
+      // produces the Net interest figure beside it — that one is cumulative to date.
+      hint: net.netApy === null ? 'no net assets to rate' : 'annualised, on net position',
       tone: net.netApy === null ? colors.textMuted : net.netApy >= 0 ? '#639922' : '#BA7517',
     },
     {
       label: 'Net interest',
       value: `${net.netInterestToDate >= 0 ? '+' : ''}${usd(net.netInterestToDate, 2)}`,
-      hint: 'to date',
+      hint: 'earned less paid, to date',
       tone: net.netInterestToDate >= 0 ? '#639922' : '#BA7517',
     },
     risk,
