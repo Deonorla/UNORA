@@ -2,15 +2,9 @@ import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { AllocationDonut } from '@/components/dashboard/PortfolioCharts';
 import { poolName, type LendingPosition } from '@/lib/position';
-import type { PoolId } from '@/lib/markets';
+import { POOL_COLORS } from '@/lib/markets';
 
 const ease = [0.22, 1, 0.36, 1] as const;
-
-const POOL_COLORS: Record<PoolId, string> = {
-  main: '#7C3AED',
-  bluechip: '#639922',
-  sponsored: '#BA7517',
-};
 
 function formatUsd(value: number, digits = 0): string {
   return `$${value.toLocaleString('en-US', {

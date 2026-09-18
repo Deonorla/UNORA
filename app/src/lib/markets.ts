@@ -19,8 +19,7 @@ export interface Pool {
   riskNote: string;
 }
 
-export const POOLS: Pool[] = [
-  {
+export const POOLS: Pool[] = [  {
     id: 'main',
     name: 'General',
     description: 'Borrow against the widest range of assets in one general-purpose market.',
@@ -39,6 +38,16 @@ export const POOLS: Pool[] = [
     riskNote: 'Requires an active sponsor. Their capacity is slashed if you default.',
   },
 ];
+
+/**
+ * Accent per pool. Purple is the general-purpose market, green the low-risk one, amber the
+ * sponsored one — the same three tones used for tiers, so a colour always means one thing.
+ */
+export const POOL_COLORS: Record<PoolId, string> = {
+  main: '#7C3AED',
+  bluechip: '#639922',
+  sponsored: '#BA7517',
+};
 
 export interface Market {
   /** Ticker, e.g. USDC. */
@@ -59,18 +68,33 @@ export interface Market {
   liquidity: number;
   /** Lowest credit score this market will lend to. */
   minScore: number;
+  /**
+   * Ceiling on total deposits. Supply is rejected above it, which is what makes the
+   * capacity bar on the deposit page a real figure rather than a constant.
+   */
+  supplyCap: number;
   /** Hex for the asset badge. Kept muted — this is a data table, not a logo wall. */
   accent: string;
 }
 
+/**
+ * Reserves, one row per market.
+ *
+ * The same asset appears in more than one pool on purpose — USDC is listed under General and
+ * Bluechip, because the pools are tranches of the same asset at different risk rather than
+ * different assets. This is also how Aave lists weETH under both Main and EtherFi. A wallet
+ * deposited in the Bluechip tranche needs a row to sit on, or its balance would be invisible
+ * on the deposit page.
+ */
 export const MARKETS: Market[] = [
-  { symbol: 'USDC',   name: 'USD Coin',         pool: 'main',      status: 'live', baseApr: 0.042, totalBorrows: 1_240_000, liquidity: 480_000, minScore: 0,  accent: '#2775CA' },
-  { symbol: 'USDT',   name: 'Tether USD',       pool: 'main',      status: 'soon', baseApr: 0.046, totalBorrows: 0, liquidity: 0, minScore: 0,  accent: '#26A17B' },
-  { symbol: 'MON',    name: 'Monad',            pool: 'main',      status: 'soon', baseApr: 0.034, totalBorrows: 0, liquidity: 0, minScore: 0,  accent: '#6E54FF' },
-  { symbol: 'WETH',   name: 'Wrapped Ether',    pool: 'main',      status: 'soon', baseApr: 0.039, totalBorrows: 0, liquidity: 0, minScore: 0,  accent: '#627EEA' },
-  { symbol: 'WBTC',   name: 'Wrapped Bitcoin',  pool: 'bluechip',  status: 'soon', baseApr: 0.031, totalBorrows: 0, liquidity: 0, minScore: 60, accent: '#F09242' },
-  { symbol: 'wstETH', name: 'Wrapped stETH',    pool: 'bluechip',  status: 'soon', baseApr: 0.036, totalBorrows: 0, liquidity: 0, minScore: 60, accent: '#00A3FF' },
-  { symbol: 'sUSDC',  name: 'Staked USDC',      pool: 'sponsored', status: 'soon', baseApr: 0.028, totalBorrows: 0, liquidity: 0, minScore: 50, accent: '#7C3AED' },
+  { symbol: 'USDC',   name: 'USD Coin',         pool: 'main',      status: 'live', baseApr: 0.042, totalBorrows: 1_240_000, liquidity: 480_000, minScore: 0,  supplyCap: 2_400_000, accent: '#2775CA' },
+  { symbol: 'USDT',   name: 'Tether USD',       pool: 'main',      status: 'soon', baseApr: 0.046, totalBorrows: 0, liquidity: 0, minScore: 0,  supplyCap: 0, accent: '#26A17B' },
+  { symbol: 'MON',    name: 'Monad',            pool: 'main',      status: 'soon', baseApr: 0.034, totalBorrows: 0, liquidity: 0, minScore: 0,  supplyCap: 0, accent: '#6E54FF' },
+  { symbol: 'WETH',   name: 'Wrapped Ether',    pool: 'main',      status: 'soon', baseApr: 0.039, totalBorrows: 0, liquidity: 0, minScore: 0,  supplyCap: 0, accent: '#627EEA' },
+  { symbol: 'USDC',   name: 'USD Coin',         pool: 'bluechip',  status: 'live', baseApr: 0.036, totalBorrows: 180_000,   liquidity: 60_000,  minScore: 60, supplyCap: 320_000,   accent: '#2775CA' },
+  { symbol: 'WBTC',   name: 'Wrapped Bitcoin',  pool: 'bluechip',  status: 'soon', baseApr: 0.031, totalBorrows: 0, liquidity: 0, minScore: 60, supplyCap: 0, accent: '#F09242' },
+  { symbol: 'wstETH', name: 'Wrapped stETH',    pool: 'bluechip',  status: 'soon', baseApr: 0.036, totalBorrows: 0, liquidity: 0, minScore: 60, supplyCap: 0, accent: '#00A3FF' },
+  { symbol: 'sUSDC',  name: 'Staked USDC',      pool: 'sponsored', status: 'soon', baseApr: 0.028, totalBorrows: 0, liquidity: 0, minScore: 50, supplyCap: 0, accent: '#7C3AED' },
 ];
 
 /** Reserves that are actually deployed. Everything else is roadmap. */
@@ -151,11 +175,6 @@ export function supplyApyAt(utilization: number): number {
 /** Total deposits in a market: what has been lent, plus what is still idle. */
 export function marketDeposits(market: Market): number {
   return market.totalBorrows + market.liquidity;
-}
-
-/** Cap on total deposits. Supply is rejected above this — a real constraint on the page. */
-export function supplyCap(market: Market): number {
-  return Math.round(marketDeposits(market) * 1.25);
 }
 
 /** Undrawn deposits across every live pool. */

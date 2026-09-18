@@ -20,7 +20,6 @@ import {
   reserveBufferOf,
   supplyApy,
   supplyApyAt,
-  supplyCap,
   utilizationOf,
   type Market,
 } from '@/lib/markets';
@@ -321,7 +320,7 @@ export default function MarketDetailPage() {
   const deposits = marketDeposits(market);
   const utilization = utilizationOf(market);
   const buffer = reserveBufferOf(market);
-  const cap = supplyCap(market);
+  const cap = market.supplyCap;
   const isLive = market.status === 'live';
 
   // The wallet's exposure to this market.
