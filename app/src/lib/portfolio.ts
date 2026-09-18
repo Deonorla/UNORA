@@ -8,6 +8,14 @@
  * Convention: `MONTHS` runs oldest -> newest, and every series is the same length.
  */
 
+import { SCORE } from '@/lib/protocol';
+import {
+  BORROW_POSITION,
+  DELEGATED_OUT,
+  IDLE_BALANCE,
+  TIER_LADDER,
+} from '@/lib/position';
+
 export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug'] as const;
 
 /** Principal drawn per month. */
@@ -45,13 +53,19 @@ export interface AllocationSlice {
 }
 
 /**
- * Where the wallet's USDC actually sits. All three are the same asset, so the
- * percentages are directly comparable.
+ * Where the wallet's USDC actually sits. All three are the same asset, so the percentages
+ * are directly comparable. Figures come from the position model rather than being repeated
+ * here, so the donut can't disagree with the cards above it.
  */
 export const ALLOCATION: AllocationSlice[] = [
-  { label: 'Locked collateral', hint: 'backing the open loan', value: 1_750, color: '#7C3AED' },
-  { label: 'Idle balance', hint: 'unencumbered', value: 2_500, color: '#A78BFA' },
-  { label: 'Delegated out', hint: 'sponsoring 3 wallets', value: 6_500, color: '#639922' },
+  {
+    label: 'Locked collateral',
+    hint: `backing loan #${BORROW_POSITION.loanId}`,
+    value: BORROW_POSITION.collateralLocked,
+    color: '#7C3AED',
+  },
+  { label: 'Idle balance', hint: 'unencumbered', value: IDLE_BALANCE, color: '#A78BFA' },
+  { label: 'Delegated out', hint: 'sponsoring 3 wallets', value: DELEGATED_OUT, color: '#639922' },
 ];
 
 export function allocationTotal(): number {
@@ -72,96 +86,39 @@ export interface StatCard {
   series?: number[];
 }
 
+/** The rung the wallet currently sits on — drives the ceiling figure. */
+const CURRENT_TIER = TIER_LADDER.find((tier) => tier.state === 'current');
+
 export const STAT_CARDS: StatCard[] = [
   {
     label: 'Credit score',
-    value: '72',
+    value: String(SCORE.value),
     delta: '+4 pts',
     tone: 'good',
     series: SCORE_SERIES,
   },
   {
     label: 'Collateral ratio',
-    value: '35%',
+    value: `${Math.round(BORROW_POSITION.collateralRatio * 100)}%`,
     delta: '−17 pp',
     tone: 'good',
     series: RATIO_SERIES,
   },
   {
     label: 'Loan ceiling',
-    value: '$12,400',
+    value: CURRENT_TIER?.ceiling ?? '—',
     delta: '+$2,100',
     tone: 'good',
     series: CEILING_SERIES,
   },
   {
     label: 'Outstanding debt',
-    value: '$5,000',
+    value: `$${BORROW_POSITION.drawn.toLocaleString('en-US')}`,
     delta: 'streaming',
     tone: 'neutral',
     series: BORROWED_SERIES,
   },
 ];
-
-/**
- * The tier ladder the score climbs. Mirrors `TIERS` in `lib/sponsorNetwork` so the
- * dashboard and the sponsor graph agree on what a score band is called.
- *
- * `state` is relative to the wallet's current score, not a property of the tier:
- *   current — the rung the score sits on
- *   cleared — a lower rung already passed, and still passed if the score dips a little
- *   locked  — not yet reached
- */
-export type TierState = 'current' | 'cleared' | 'locked';
-
-export interface TierRung {
-  name: string;
-  /** Score needed to reach this rung. */
-  minScore: number;
-  ratio: string;
-  ceiling: string;
-  color: string;
-  fill: string;
-  state: TierState;
-}
-
-export const TIER_LADDER: TierRung[] = [
-  {
-    name: 'Prime',
-    minScore: 80,
-    ratio: '20%',
-    ceiling: '$25,000',
-    color: '#639922',
-    fill: '#E3E8D5',
-    state: 'locked',
-  },
-  {
-    name: 'Established',
-    minScore: 65,
-    ratio: '35%',
-    ceiling: '$12,400',
-    color: '#7C3AED',
-    fill: '#E7DBF1',
-    state: 'current',
-  },
-  {
-    name: 'Building',
-    minScore: 50,
-    ratio: '55%',
-    ceiling: '$6,200',
-    color: '#BA7517',
-    fill: '#EFE3D3',
-    state: 'cleared',
-  },
-];
-
-/** Points still needed for the next rung up, or null if already at the top. */
-export function pointsToNextTier(score: number): { rung: TierRung; gap: number } | null {
-  const next = [...TIER_LADDER]
-    .filter((tier) => tier.minScore > score)
-    .sort((a, b) => a.minScore - b.minScore)[0];
-  return next ? { rung: next, gap: next.minScore - score } : null;
-}
 
 /** Compact money formatting — `$12.4K`. */
 export function formatCompact(value: number): string {

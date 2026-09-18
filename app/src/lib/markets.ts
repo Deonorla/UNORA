@@ -64,7 +64,7 @@ export interface Market {
 }
 
 export const MARKETS: Market[] = [
-  { symbol: 'USDC',   name: 'USD Coin',         pool: 'main',      status: 'live', baseApr: 0.042, totalBorrows: 1_240_000, liquidity: 2_860_000, minScore: 0,  accent: '#2775CA' },
+  { symbol: 'USDC',   name: 'USD Coin',         pool: 'main',      status: 'live', baseApr: 0.042, totalBorrows: 1_240_000, liquidity: 480_000, minScore: 0,  accent: '#2775CA' },
   { symbol: 'USDT',   name: 'Tether USD',       pool: 'main',      status: 'soon', baseApr: 0.046, totalBorrows: 0, liquidity: 0, minScore: 0,  accent: '#26A17B' },
   { symbol: 'MON',    name: 'Monad',            pool: 'main',      status: 'soon', baseApr: 0.034, totalBorrows: 0, liquidity: 0, minScore: 0,  accent: '#6E54FF' },
   { symbol: 'WETH',   name: 'Wrapped Ether',    pool: 'main',      status: 'soon', baseApr: 0.039, totalBorrows: 0, liquidity: 0, minScore: 0,  accent: '#627EEA' },
@@ -76,6 +76,39 @@ export const MARKETS: Market[] = [
 /** Reserves that are actually deployed. Everything else is roadmap. */
 export function liveMarkets(): Market[] {
   return MARKETS.filter((m) => m.status === 'live');
+}
+
+/**
+ * Share of borrow interest the protocol keeps before paying suppliers. The rest funds the
+ * reserve that absorbs defaults.
+ */
+export const RESERVE_FACTOR = 0.1;
+
+/** Outstanding principal as a share of total deposits. */
+export function utilizationOf(market: Market): number {
+  const deposits = market.totalBorrows + market.liquidity;
+  return deposits === 0 ? 0 : market.totalBorrows / deposits;
+}
+
+/**
+ * What a supplier actually earns.
+ *
+ * A supplier cannot earn the headline borrow rate — only the borrowed portion of the pool
+ * generates interest at all, and the protocol takes its cut first. So:
+ *
+ *     supplyApy = borrowApr x utilization x (1 - reserveFactor)
+ *
+ * Deriving it rather than listing it separately is what keeps the borrow page's APR and
+ * the deposit page's APY from drifting apart. At USDC's 72% utilization that is roughly
+ * 2.7% against a 4.2% borrow rate.
+ */
+export function supplyApy(market: Market): number {
+  return market.baseApr * utilizationOf(market) * (1 - RESERVE_FACTOR);
+}
+
+/** Reserve buffer: the undrawn share a withdrawal would be paid from. */
+export function reserveBufferOf(market: Market): number {
+  return 1 - utilizationOf(market);
 }
 
 /** Undrawn deposits across every live pool. */

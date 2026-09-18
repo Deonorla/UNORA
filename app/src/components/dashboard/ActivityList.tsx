@@ -6,8 +6,6 @@ import {
   RotateCcw,
   Star,
   ArrowDownToLine,
-  Banknote,
-  Handshake,
   ShieldAlert,
   Search,
   SlidersHorizontal,
@@ -27,7 +25,12 @@ interface Activity {
   Icon: LucideIcon;
 }
 
-/** Grouped the way a statement reads — today first, then backwards. */
+/**
+ * The five most recent events. Deliberately short — the full feed lives at
+ * /dashboard/activity, and a dashboard that lists everything is a report.
+ *
+ * Grouped the way a statement reads: today first, then backwards.
+ */
 const GROUPS: { label: string; items: Activity[] }[] = [
   {
     label: 'Today',
@@ -38,17 +41,10 @@ const GROUPS: { label: string; items: Activity[] }[] = [
     ],
   },
   {
-    label: 'Yesterday',
+    label: 'This week',
     items: [
-      { name: 'Deposit', detail: 'General pool — 4.20% APY', amount: '$500.00', kind: 'Deposit', time: '1d ago', color: '#7C3AED', Icon: ArrowDownToLine },
-      { name: 'Capacity delegated', detail: 'To T. Reyes', amount: '$3,000', kind: 'Sponsor', time: '1d ago', color: '#7C3AED', Icon: Handshake },
-    ],
-  },
-  {
-    label: 'Earlier',
-    items: [
+      { name: 'Deposit', detail: 'General pool — 2.72% APY', amount: '$500.00', kind: 'Deposit', time: '1d ago', color: '#7C3AED', Icon: ArrowDownToLine },
       { name: 'Default flagged', detail: 'A. Bello — stream stalled', amount: 'slashed', kind: 'Default', time: '4d ago', color: '#BA7517', Icon: ShieldAlert },
-      { name: 'Loan received', detail: 'General pool — 4.20% APR', amount: '$5,000', kind: 'Borrowed', time: '5d ago', color: '#639922', Icon: Banknote },
     ],
   },
 ];
@@ -56,7 +52,11 @@ const GROUPS: { label: string; items: Activity[] }[] = [
 export default function ActivityList() {
   const colors = useTheme();
 
-  let index = 0;
+  // Flat index per row, so the stagger keeps counting across groups without a counter
+  // mutated during render.
+  const groupOffsets = GROUPS.map((_, gi) =>
+    GROUPS.slice(0, gi).reduce((total, group) => total + group.items.length, 0),
+  );
 
   return (
     <motion.div
@@ -98,7 +98,7 @@ export default function ActivityList() {
 
       {/* Groups */}
       <div className="space-y-5">
-        {GROUPS.map((group) => (
+        {GROUPS.map((group, gi) => (
           <div key={group.label}>
             <div
               className="font-mono text-[9px] uppercase tracking-widest mb-2"
@@ -108,9 +108,9 @@ export default function ActivityList() {
             </div>
 
             <div className="space-y-0.5">
-              {group.items.map((item) => {
+              {group.items.map((item, ii) => {
                 const Icon = item.Icon;
-                const delay = 0.45 + index++ * 0.04;
+                const delay = 0.45 + (groupOffsets[gi] + ii) * 0.04;
                 return (
                   <motion.div
                     key={`${group.label}-${item.name}-${item.time}`}

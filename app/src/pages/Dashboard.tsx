@@ -3,26 +3,29 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Bell } from 'lucide-react';
 import { SCORE } from '@/lib/protocol';
-import {
-  ALLOCATION,
-  SCORE_SERIES,
-  STAT_CARDS,
-  allocationTotal,
-  formatCompact,
-} from '@/lib/portfolio';
 import { resolveWalletState } from '@/lib/position';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader from '@/components/dashboard/PageHeader';
-import TierDeck from '@/components/dashboard/TierDeck';
-import StatCards from '@/components/dashboard/StatCards';
-import {
-  AllocationDonut,
-  BorrowRepayChart,
-  TrendLineChart,
-} from '@/components/dashboard/PortfolioCharts';
+import NetSummary from '@/components/dashboard/NetSummary';
+import PositionsDeck from '@/components/dashboard/PositionsDeck';
+import PositionChart from '@/components/dashboard/PositionChart';
 import LendingSection from '@/components/dashboard/LendingSection';
 import EmptyWalletState from '@/components/dashboard/EmptyWalletState';
 import ActivityList from '@/components/dashboard/ActivityList';
+
+/**
+ * Time-aware greeting with no name.
+ *
+ * There is no name to show — a wallet is an address — and inventing one meant every
+ * visitor was greeted as the same fictional person. Aave just says "Good morning." and it
+ * reads as intentional rather than unfinished.
+ */
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 function GreetingHeader() {
   const colors = useTheme();
@@ -30,7 +33,7 @@ function GreetingHeader() {
   return (
     <PageHeader
       dense
-      title="Good Morning, Alvie"
+      title={`${greeting()}.`}
       subtitle={new Date().toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -49,39 +52,18 @@ function GreetingHeader() {
   );
 }
 
-/** Single-line provenance for the score — replaces the old hero card's fine print. */
+/** Two facts about the score, not five — the rest are already on the deck's score card. */
 function ScoreProvenance() {
   const colors = useTheme();
-  const facts = [
-    `ScoreRegistry #${SCORE.nftId} · soulbound`,
-    `Repayment ${Math.round(SCORE.repaymentRate * 100)}%`,
-    `${SCORE.historyMonths} mo history`,
-    `${SCORE.liquidations} liquidations`,
-    'Updated via Chainlink CRE',
-  ];
-
   return (
-    <div className="flex items-center justify-center gap-2.5 flex-wrap -mt-1 mb-5">
-      {facts.map((fact, i) => (
-        <span key={fact} className="flex items-center gap-2.5">
-          {i > 0 && <span style={{ color: colors.textMuted }}>·</span>}
-          <span className="font-mono text-[9px]" style={{ color: colors.textMuted }}>
-            {fact}
-          </span>
-        </span>
-      ))}
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: string }) {
-  const colors = useTheme();
-  return (
-    <div
-      className="font-mono text-[9px] uppercase tracking-widest mb-3"
-      style={{ color: colors.textMuted }}
-    >
-      {children}
+    <div className="flex items-center justify-center gap-2.5 -mt-1 mb-4">
+      <span className="font-mono text-[9px]" style={{ color: colors.textMuted }}>
+        ScoreRegistry #{SCORE.nftId} · soulbound
+      </span>
+      <span style={{ color: colors.textMuted }}>·</span>
+      <span className="font-mono text-[9px]" style={{ color: colors.textMuted }}>
+        Updated via Chainlink CRE
+      </span>
     </div>
   );
 }
@@ -94,6 +76,12 @@ function SectionLabel({ children }: { children: string }) {
  *   both              -> stacked, each under its own label
  *   neither           -> the empty state
  *
+ * Deliberately four blocks, not ten. A wallet opening this wants three answers — where do I
+ * stand, what do I hold, and what needs my attention — and every panel that doesn't serve
+ * one of those is a panel that makes the answer harder to find. Per-section stat-card rows
+ * were cut because the summary strip and the deck already carry those numbers, and three
+ * separate charts collapsed into one with a series toggle.
+ *
  * `?state=` overrides the mock position so each branch can be seen without a wallet:
  * `new`, `borrower`, `lender`, `lender-multi`, `both`, `both-multi`.
  */
@@ -103,67 +91,39 @@ export default function Dashboard() {
 
   const hasBorrower = position.scored;
   const lending = position.lending;
-  const hasLending = lending !== null;
-  const stacked = hasBorrower && hasLending;
+  const active = hasBorrower || lending !== null;
 
   return (
     <DashboardLayout>
       <GreetingHeader />
 
       <div className="max-w-[1100px] mx-auto px-8 py-8">
-        {!hasBorrower && !hasLending && <EmptyWalletState />}
+        {!active && <EmptyWalletState />}
 
-        {hasBorrower && (
-          <div className={stacked ? 'mb-8' : ''}>
-            {stacked && <SectionLabel>Borrowing</SectionLabel>}
+        {active && (
+          <>
+            {/* Where do I stand? */}
+            <NetSummary position={position} />
 
-            <TierDeck />
-            <ScoreProvenance />
+            {/* What do I hold? */}
+            <PositionsDeck position={position} />
+            {hasBorrower && <ScoreProvenance />}
 
-            <StatCards cards={STAT_CARDS} />
-
-            {/* Three panels across, then the full-width statement below. */}
-            <div className="grid grid-cols-[1.15fr_1fr_1fr] gap-4 mt-4">
-              <BorrowRepayChart />
-              <AllocationDonut
-                title="Capital allocation"
-                meta={formatCompact(allocationTotal())}
-                delay={0.3}
-                slices={ALLOCATION}
-                centerLabel="Total"
-                ariaLabel="Where the wallet's USDC sits"
-              />
-              <TrendLineChart
-                title="Score history"
-                meta="+14 pts"
-                delay={0.35}
-                series={SCORE_SERIES}
-                yMin={40}
-                yMax={100}
-                ticks={[40, 60, 80, 100]}
-                thresholds={[
-                  { value: 80, label: 'Prime 80', color: '#639922' },
-                  { value: 65, label: 'Established 65', color: '#7C3AED' },
-                ]}
-                gradientId="score-fill"
-                ariaLabel="Credit score by month"
-              />
+            {/* How did I get here? One plot, three subjects. */}
+            <div className="mb-4">
+              <PositionChart position={position} />
             </div>
-          </div>
+          </>
         )}
 
+        {/* What needs my attention? */}
         {lending && (
-          <div>
-            {stacked && <SectionLabel>Lending</SectionLabel>}
+          <div className="mb-4">
             <LendingSection lending={lending} />
           </div>
         )}
 
-        {(hasBorrower || hasLending) && (
-          <div className="mt-4">
-            <ActivityList />
-          </div>
-        )}
+        {active && <ActivityList />}
       </div>
     </DashboardLayout>
   );

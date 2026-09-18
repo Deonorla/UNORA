@@ -5,15 +5,53 @@
  *   - a `ScoreRegistry` NFT (it has been scored, and can borrow)
  *   - a `LendingPool` deposit (it is a lender, and earns yield)
  *
- * They are not mutually exclusive, so the dashboard renders each section on its own
- * merits and stacks them when both are present. Nothing here is wired to a contract yet.
+ * They are not mutually exclusive, so the dashboard renders each on its own merits.
+ * This module is also the single source for the wallet's own money — deposits, debt,
+ * escrowed collateral, idle balance — so nothing on the dashboard can disagree about how
+ * much the wallet holds.
  *
- * In production this becomes `ScoreRegistry.getScore()` and a `LendingPool` position
- * read. The `?state=` override below exists so the four states can be demoed and tested
- * without redeploying anything.
+ * In production this becomes `ScoreRegistry.getScore()`, a `LendingPool` position read,
+ * and the loan's terms from the pool. The `?state=` override exists so every branch can be
+ * demoed and tested without a wallet.
  */
 
-import { MARKETS, POOLS, type PoolId } from '@/lib/markets';
+import { MARKETS, POOLS, supplyApy, utilizationOf, type PoolId } from '@/lib/markets';
+
+/* -------------------------------------------------------------------------- */
+/*  Borrow side                                                               */
+/* -------------------------------------------------------------------------- */
+
+export interface BorrowPosition {
+  loanId: number;
+  /** Outstanding principal. */
+  drawn: number;
+  apr: number;
+  /** USDC escrowed against the loan. */
+  collateralLocked: number;
+  /** collateralLocked / drawn. */
+  collateralRatio: number;
+  /** Interest paid to date, which nets against yield earned. */
+  interestPaid: number;
+}
+
+export const BORROW_POSITION: BorrowPosition = {
+  loanId: 12,
+  drawn: 5_000,
+  apr: 0.042,
+  collateralLocked: 1_750,
+  collateralRatio: 0.35,
+  interestPaid: 88.4,
+};
+
+/** USDC sitting in the wallet, unencumbered and not earning. */
+export const IDLE_BALANCE = 2_500;
+
+/** Capacity delegated out to sponsored wallets. Committed, but still the wallet's capital. */
+export const DELEGATED_OUT = 6_500;
+
+/* -------------------------------------------------------------------------- */
+/*  Lend side                                                                 */
+/* -------------------------------------------------------------------------- */
 
 export interface PoolHolding {
   pool: PoolId;
@@ -44,39 +82,47 @@ export interface WalletPosition {
  * Cumulative yield by month, oldest first. Ends on `accruedYield` so the chart and the
  * card cannot disagree.
  */
-export const YIELD_SERIES = [18, 39, 61, 84, 106, 129, 152, 178.5];
-
-/** Cumulative deposit balance by month — the wallet topped the position up twice. */
-export const DEPOSITED_SERIES = [0, 1_000, 1_000, 2_500, 2_500, 4_250, 4_250, 4_250];
+export const YIELD_SERIES = [60, 128, 195, 262, 320, 380, 440, 500];
 
 /**
- * Blended APY by month. The final point is replaced with the live blended figure at
- * render time, so the sparkline can't drift away from the number above it.
- */
-export const APY_SERIES = [4.1, 4.2, 4.35, 4.5, 4.42, 4.55, 4.61];
-
-const TOTAL_YIELD = YIELD_SERIES[YIELD_SERIES.length - 1];
-const YIELD_LAST_30D = TOTAL_YIELD - YIELD_SERIES[YIELD_SERIES.length - 2];
-
-/**
- * Pool health per tranche.
+ * Supply APY for a tranche.
  *
- * In production these come from `LendingPool.getReserveData()`: utilization is
- * outstanding principal over total deposits, and the reserve buffer is the undrawn share
- * that a withdrawal would be paid from. Mocked rather than derived from `lib/markets`
- * because a tranche can hold deposits before its borrow markets open, and a derived
- * figure would divide by zero there.
+ * Live tranches derive it from the borrow rate and utilization, so the deposit side can
+ * never drift from the borrow side. A tranche that holds deposits before its borrow market
+ * opens carries the rate the protocol intends to pay instead — there is no utilization to
+ * derive from yet.
  */
-const POOL_HEALTH: Record<PoolId, { utilization: number; reserveBuffer: number }> = {
-  main: { utilization: 0.3, reserveBuffer: 0.7 },
-  bluechip: { utilization: 0.22, reserveBuffer: 0.78 },
-  sponsored: { utilization: 0.41, reserveBuffer: 0.59 },
+const TARGET_APY: Record<PoolId, number> = {
+  main: 0,
+  bluechip: 0.041,
+  sponsored: 0.032,
 };
 
+export function poolSupplyApy(pool: PoolId): number {
+  const live = MARKETS.filter((m) => m.pool === pool && m.status === 'live');
+  const deposits = live.reduce((sum, m) => sum + m.totalBorrows + m.liquidity, 0);
+  if (deposits === 0) return TARGET_APY[pool];
+  return live.reduce((sum, m) => sum + supplyApy(m) * (m.totalBorrows + m.liquidity), 0) / deposits;
+}
+
 /**
- * Deposits are tranches of the same USDC market — a risk tier you choose, not a
- * different asset — so holding several is consistent with USDC being the only deployed
- * reserve.
+ * Utilization and reserve buffer for a tranche, derived from its live markets.
+ *
+ * A tranche with deposits but no open borrow market is genuinely 0% utilized — nothing is
+ * out on loan, so every cent is available to withdraw. That falls out of the arithmetic
+ * rather than needing a special case.
+ */
+function poolHealth(pool: PoolId): { utilization: number; reserveBuffer: number } {
+  const live = MARKETS.filter((m) => m.pool === pool && m.status === 'live');
+  const borrows = live.reduce((sum, m) => sum + m.totalBorrows, 0);
+  const deposits = live.reduce((sum, m) => sum + m.totalBorrows + m.liquidity, 0);
+  if (deposits === 0) return { utilization: 0, reserveBuffer: 1 };
+  return { utilization: borrows / deposits, reserveBuffer: 1 - borrows / deposits };
+}
+
+/**
+ * Deposits are tranches of the same USDC market — a risk tier you choose, not a different
+ * asset — so holding several is consistent with USDC being the only deployed reserve.
  */
 function makeLending(holdings: PoolHolding[]): LendingPosition {
   const value = holdings.reduce((sum, h) => sum + h.value, 0);
@@ -86,25 +132,155 @@ function makeLending(holdings: PoolHolding[]): LendingPosition {
   // reflects where the money actually is.
   const utilization =
     value > 0
-      ? holdings.reduce((sum, h) => sum + POOL_HEALTH[h.pool].utilization * h.value, 0) / value
+      ? holdings.reduce((sum, h) => sum + poolHealth(h.pool).utilization * h.value, 0) / value
       : 0;
 
   return {
     holdings,
     accruedYield: value - deposited,
-    yieldLast30d: YIELD_LAST_30D,
+    yieldLast30d: YIELD_SERIES[YIELD_SERIES.length - 1] - YIELD_SERIES[YIELD_SERIES.length - 2],
     health: { utilization, reserveBuffer: 1 - utilization },
   };
 }
 
-const SINGLE_POOL: PoolHolding[] = [
-  { pool: 'main', deposited: 4_250, value: 4_428.5, apy: 0.042 },
+function holding(pool: PoolId, deposited: number, yieldShare: number): PoolHolding {
+  return { pool, deposited, value: deposited + yieldShare, apy: poolSupplyApy(pool) };
+}
+
+const SINGLE_POOL: PoolHolding[] = [holding('main', 12_000, 500)];
+
+const MULTI_POOL: PoolHolding[] = [holding('main', 8_000, 340), holding('bluechip', 4_000, 160)];
+
+/* -------------------------------------------------------------------------- */
+/*  Net position                                                              */
+/* -------------------------------------------------------------------------- */
+
+export interface NetSummary {
+  /** Everything the wallet owns: escrowed collateral, idle cash, supplied deposits. */
+  assets: number;
+  /** Outstanding principal. */
+  debt: number;
+  /** assets - debt. */
+  net: number;
+  /** Interest earned per year across the deposit position. */
+  annualYield: number;
+  /** Interest paid per year on the loan. */
+  annualInterest: number;
+  /**
+   * Yield earned less interest paid, as a rate on net position. Null when net position is
+   * zero or negative — a rate on nothing is undefined, and rendering it as 0.00% would be
+   * a fabricated number rather than a missing one.
+   */
+  netApy: number | null;
+  /** Yield accrued to date minus interest paid to date. */
+  netInterestToDate: number;
+}
+
+/**
+ * Nets the two sides into one set of figures.
+ *
+ * This is what lets a single dashboard serve a wallet that both lends and borrows: rather
+ * than reading a Borrowing half and a Lending half and subtracting them yourself, the
+ * headline already answers "how am I doing overall".
+ */
+export function netSummary(position: WalletPosition): NetSummary {
+  const deposits = position.lending ? positionValue(position.lending) : 0;
+  const debt = position.scored ? BORROW_POSITION.drawn : 0;
+  const collateral = position.scored ? BORROW_POSITION.collateralLocked : 0;
+
+  const assets = collateral + IDLE_BALANCE + deposits;
+  const net = assets - debt;
+
+  const annualYield = position.lending
+    ? position.lending.holdings.reduce((sum, h) => sum + h.value * h.apy, 0)
+    : 0;
+  const annualInterest = debt * BORROW_POSITION.apr;
+
+  return {
+    assets,
+    debt,
+    net,
+    annualYield,
+    annualInterest,
+    netApy: net > 0 ? (annualYield - annualInterest) / net : null,
+    netInterestToDate:
+      (position.lending?.accruedYield ?? 0) - (position.scored ? BORROW_POSITION.interestPaid : 0),
+  };
+}
+
+/**
+ * How far the score can fall before the wallet drops a tier — the figure that actually
+ * measures risk here.
+ *
+ * Collateral is locked at exactly the ratio the tier requires, so unlike Aave there is no
+ * over-collateralisation buffer to report. The real exposure is a score downgrade, which
+ * would raise the ratio demanded against the same loan.
+ */
+export function tierBuffer(score: number): { rung: TierRung; points: number } | null {
+  const floor = [...TIER_LADDER]
+    .filter((tier) => tier.minScore <= score)
+    .sort((a, b) => b.minScore - a.minScore)[0];
+  return floor ? { rung: floor, points: score - floor.minScore } : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Tier ladder — reference data, shown on the Borrow page                     */
+/* -------------------------------------------------------------------------- */
+
+export type TierState = 'current' | 'cleared' | 'locked';
+
+export interface TierRung {
+  name: string;
+  /** Score needed to reach this rung. */
+  minScore: number;
+  ratio: string;
+  ceiling: string;
+  color: string;
+  fill: string;
+  state: TierState;
+}
+
+export const TIER_LADDER: TierRung[] = [
+  {
+    name: 'Prime',
+    minScore: 80,
+    ratio: '20%',
+    ceiling: '$25,000',
+    color: '#639922',
+    fill: '#E3E8D5',
+    state: 'locked',
+  },
+  {
+    name: 'Established',
+    minScore: 65,
+    ratio: '35%',
+    ceiling: '$12,400',
+    color: '#7C3AED',
+    fill: '#E7DBF1',
+    state: 'current',
+  },
+  {
+    name: 'Building',
+    minScore: 50,
+    ratio: '55%',
+    ceiling: '$6,200',
+    color: '#BA7517',
+    fill: '#EFE3D3',
+    state: 'cleared',
+  },
 ];
 
-const MULTI_POOL: PoolHolding[] = [
-  { pool: 'main', deposited: 3_000, value: 3_126, apy: 0.042 },
-  { pool: 'bluechip', deposited: 1_250, value: 1_302.5, apy: 0.058 },
-];
+/** Points still needed for the next rung up, or null if already at the top. */
+export function pointsToNextTier(score: number): { rung: TierRung; gap: number } | null {
+  const next = [...TIER_LADDER]
+    .filter((tier) => tier.minScore > score)
+    .sort((a, b) => a.minScore - b.minScore)[0];
+  return next ? { rung: next, gap: next.minScore - score } : null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Wallet states                                                             */
+/* -------------------------------------------------------------------------- */
 
 /** Named wallet states, so the conditional rendering can be exercised end to end. */
 export const WALLET_STATES = {
@@ -126,11 +302,20 @@ export type WalletStateKey = keyof typeof WALLET_STATES;
 export const DEFAULT_WALLET_STATE: WalletStateKey = 'both-multi';
 
 /** Reads `?state=` off the URL, falling back to the default. */
-export function resolveWalletState(search: string): { key: WalletStateKey; position: WalletPosition } {
+export function resolveWalletState(search: string): {
+  key: WalletStateKey;
+  position: WalletPosition;
+} {
   const requested = new URLSearchParams(search).get('state');
-  const key = (requested && requested in WALLET_STATES ? requested : DEFAULT_WALLET_STATE) as WalletStateKey;
+  const key = (
+    requested && requested in WALLET_STATES ? requested : DEFAULT_WALLET_STATE
+  ) as WalletStateKey;
   return { key, position: WALLET_STATES[key] };
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Derived figures                                                           */
+/* -------------------------------------------------------------------------- */
 
 /** Weighted APY across tranches — what the position is actually earning. */
 export function blendedApy(lending: LendingPosition): number {
@@ -153,13 +338,12 @@ export function poolName(pool: PoolId): string {
   return POOLS.find((p) => p.id === pool)?.name ?? pool;
 }
 
-/**
- * Undrawn liquidity in a tranche's live markets. Used for the "can I withdraw now"
- * note — a withdrawal is limited by what the pool has on hand, not by its deposits.
- */
-export function poolLiquidity(pool: PoolId): number {
-  return MARKETS.filter((m) => m.pool === pool && m.status === 'live').reduce(
-    (sum, m) => sum + m.liquidity,
-    0,
+/** Weighted live-market utilization for a tranche. */
+export function poolUtilization(pool: PoolId): number {
+  const live = MARKETS.filter((m) => m.pool === pool && m.status === 'live');
+  const deposits = live.reduce((sum, m) => sum + m.totalBorrows + m.liquidity, 0);
+  if (deposits === 0) return 0;
+  return (
+    live.reduce((sum, m) => sum + utilizationOf(m) * (m.totalBorrows + m.liquidity), 0) / deposits
   );
 }

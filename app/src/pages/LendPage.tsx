@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
-import { totalDeposits } from '@/lib/markets';
+import { MARKETS, supplyApy, totalDeposits } from '@/lib/markets';
 import { positionDeposited, resolveWalletState } from '@/lib/position';
 
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -27,11 +27,16 @@ interface DepositReserve {
  * Deposit reserves. Only USDC is deployed on Monad testnet — the rest are roadmap and
  * carry no liquidity, so they are listed but not depositable.
  *
- * USDC's size comes from `totalDeposits()` in `lib/markets` rather than a literal, so this
- * page and the borrow page can't quote different numbers for the same pool.
+ * USDC's size comes from `totalDeposits()` and its APY from `supplyApy()`, both in
+ * `lib/markets`, so this page can't quote a different rate or size than the borrow page
+ * for the same pool. `supplyApy` is the borrow rate scaled by utilization less the
+ * protocol's cut — a supplier cannot earn the full borrow rate.
  */
+const USDC_MARKET = MARKETS.find((market) => market.symbol === 'USDC');
+const USDC_SUPPLY_APY = USDC_MARKET ? supplyApy(USDC_MARKET) : 0;
+
 const reserves: DepositReserve[] = [
-  { symbol: 'USDC', name: 'USD Coin',        apy: '5.80%', apyValue: 0.058, apyTrend: 'up',     poolSize: totalDeposits(), ltv: '80%', color: '#2775CA', status: 'live' },
+  { symbol: 'USDC', name: 'USD Coin',        apy: `${(USDC_SUPPLY_APY * 100).toFixed(2)}%`, apyValue: USDC_SUPPLY_APY, apyTrend: 'stable', poolSize: totalDeposits(), ltv: '80%', color: '#2775CA', status: 'live' },
   { symbol: 'MON',  name: 'Monad',           apy: '4.20%', apyValue: 0.042, apyTrend: 'stable', poolSize: 0,               ltv: '75%', color: '#6E54FF', status: 'soon' },
   { symbol: 'USDT', name: 'Tether USD',      apy: '5.60%', apyValue: 0.056, apyTrend: 'stable', poolSize: 0,               ltv: '80%', color: '#26A17B', status: 'soon' },
   { symbol: 'WETH', name: 'Wrapped Ether',   apy: '3.10%', apyValue: 0.031, apyTrend: 'down',   poolSize: 0,               ltv: '70%', color: '#627EEA', status: 'soon' },

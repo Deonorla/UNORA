@@ -4,15 +4,18 @@ import { MONTHS, BORROWED_SERIES, REPAID_SERIES, formatCompact } from '@/lib/por
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
-/** Shared card shell so every panel lines up. */
-function Panel({
+/**
+ * Shared card shell. `right` holds a control — the chart's series toggle — so the toggle
+ * sits in the card header rather than as a separate row.
+ */
+export function Panel({
   title,
-  meta,
+  right,
   children,
   delay = 0,
 }: {
   title: string;
-  meta?: string;
+  right?: React.ReactNode;
   children: React.ReactNode;
   delay?: number;
 }) {
@@ -25,18 +28,11 @@ function Panel({
       className="rounded-2xl border shadow-sm p-5 flex flex-col h-full"
       style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
     >
-      <div className="flex items-center justify-between mb-5">
-        <span className="font-sans text-xs font-medium" style={{ color: colors.text }}>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <span className="font-sans text-xs font-medium shrink-0" style={{ color: colors.text }}>
           {title}
         </span>
-        {meta && (
-          <span
-            className="font-mono text-[9px] px-2 py-1 rounded-full"
-            style={{ backgroundColor: 'rgba(124,58,237,0.07)', color: '#7C3AED' }}
-          >
-            {meta}
-          </span>
-        )}
+        {right}
       </div>
       {children}
     </motion.div>
@@ -44,15 +40,15 @@ function Panel({
 }
 
 /* -------------------------------------------------------------------------- */
-/*  Borrower-only: mirrored bar chart                                          */
+/*  Chart bodies — no panel, so a toggle can swap between them                 */
 /* -------------------------------------------------------------------------- */
 
 /**
  * Mirrored bar chart: drawn principal above the axis, repaid principal below it.
- * The gap between the two is the outstanding balance — which is the whole story of
- * a credit line, so the two series share one scale rather than being normalised apart.
+ * The gap between the two is the outstanding balance — which is the whole story of a
+ * credit line, so the two series share one scale rather than being normalised apart.
  */
-export function BorrowRepayChart() {
+export function BorrowRepayBody() {
   const colors = useTheme();
 
   const totalBorrowed = BORROWED_SERIES.reduce((a, b) => a + b, 0);
@@ -60,7 +56,7 @@ export function BorrowRepayChart() {
   const max = Math.max(...BORROWED_SERIES, ...REPAID_SERIES);
 
   return (
-    <Panel title="Borrowed vs repaid" meta="Last 8 months" delay={0.25}>
+    <div className="flex flex-col flex-1">
       <div className="text-center mb-3">
         <div
           className="font-mono text-[9px] uppercase tracking-widest mb-0.5"
@@ -73,7 +69,7 @@ export function BorrowRepayChart() {
         </div>
       </div>
 
-      <div className="flex items-end gap-1.5 h-[96px]">
+      <div className="flex items-end gap-1.5 h-[120px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-end h-full">
             <motion.div
@@ -81,7 +77,7 @@ export function BorrowRepayChart() {
               style={{ backgroundColor: '#7C3AED' }}
               initial={{ height: 0 }}
               animate={{ height: `${(BORROWED_SERIES[i] / max) * 100}%` }}
-              transition={{ duration: 0.7, delay: 0.35 + i * 0.04, ease }}
+              transition={{ duration: 0.7, delay: 0.15 + i * 0.04, ease }}
             />
           </div>
         ))}
@@ -99,7 +95,7 @@ export function BorrowRepayChart() {
         ))}
       </div>
 
-      <div className="flex items-start gap-1.5 h-[96px]">
+      <div className="flex items-start gap-1.5 h-[120px]">
         {MONTHS.map((month, i) => (
           <div key={month} className="flex-1 flex flex-col justify-start h-full">
             <motion.div
@@ -107,7 +103,7 @@ export function BorrowRepayChart() {
               style={{ backgroundColor: '#A78BFA' }}
               initial={{ height: 0 }}
               animate={{ height: `${(REPAID_SERIES[i] / max) * 100}%` }}
-              transition={{ duration: 0.7, delay: 0.35 + i * 0.04, ease }}
+              transition={{ duration: 0.7, delay: 0.15 + i * 0.04, ease }}
             />
           </div>
         ))}
@@ -127,130 +123,9 @@ export function BorrowRepayChart() {
           {Math.round((totalRepaid / totalBorrowed) * 100)}% of everything drawn
         </div>
       </div>
-    </Panel>
+    </div>
   );
 }
-
-/* -------------------------------------------------------------------------- */
-/*  Shared: donut                                                             */
-/* -------------------------------------------------------------------------- */
-
-export interface DonutSlice {
-  label: string;
-  hint: string;
-  value: number;
-  color: string;
-}
-
-interface DonutProps {
-  title: string;
-  meta?: string;
-  delay?: number;
-  slices: DonutSlice[];
-  /** Caption above the centre figure — "Total", "Pools", etc. */
-  centerLabel: string;
-  /** Renders the centre figure from the summed slice values. */
-  formatCenter?: (total: number) => string;
-  ariaLabel: string;
-}
-
-/**
- * Donut of how a fixed pot of capital is split. Used twice on the dashboard — once for
- * where the wallet's USDC sits, once for how it is spread across lending tranches — so
- * it takes its slices rather than importing them.
- */
-export function AllocationDonut({
-  title,
-  meta,
-  delay = 0,
-  slices,
-  centerLabel,
-  formatCenter = formatCompact,
-  ariaLabel,
-}: DonutProps) {
-  const colors = useTheme();
-
-  const total = slices.reduce((sum, slice) => sum + slice.value, 0);
-  const size = 172;
-  const stroke = 18;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-
-  // Each slice is an arc offset by the sum of the slices before it. Computed purely —
-  // accumulating into a variable during the render map trips the React Compiler.
-  const fractions = slices.map((slice) => (total > 0 ? slice.value / total : 0));
-  const offsets = fractions.map((_, i) => fractions.slice(0, i).reduce((a, b) => a + b, 0));
-
-  return (
-    <Panel title={title} meta={meta} delay={delay}>
-      {/* my-auto centres it in the free space, so equal-height cards don't pool whitespace. */}
-      <div className="relative my-auto mx-auto" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90" role="img" aria-label={ariaLabel}>
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(0,0,0,0.05)"
-            strokeWidth={stroke}
-          />
-          {slices.map((slice, i) => {
-            const dash = fractions[i] * circumference;
-            const offset = offsets[i] * circumference;
-            return (
-              <motion.circle
-                key={slice.label}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={slice.color}
-                strokeWidth={stroke}
-                strokeLinecap="butt"
-                strokeDasharray={`${dash} ${circumference - dash}`}
-                initial={{ strokeDashoffset: circumference }}
-                animate={{ strokeDashoffset: -offset }}
-                transition={{ duration: 0.9, delay: 0.4 + i * 0.1, ease }}
-              />
-            );
-          })}
-        </svg>
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="font-mono text-[8px] uppercase tracking-widest" style={{ color: colors.textMuted }}>
-            {centerLabel}
-          </span>
-          <span className="font-serif text-xl font-semibold tabular-nums" style={{ color: colors.text }}>
-            {formatCenter(total)}
-          </span>
-        </div>
-      </div>
-
-      <div className="pt-5 space-y-2.5">
-        {slices.map((slice) => (
-          <div key={slice.label} className="flex items-center gap-2.5">
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
-            <div className="min-w-0 flex-1">
-              <div className="font-sans text-[11px]" style={{ color: colors.text }}>
-                {slice.label}
-              </div>
-              <div className="font-mono text-[9px]" style={{ color: colors.textMuted }}>
-                {slice.hint}
-              </div>
-            </div>
-            <span className="font-mono text-[10px] tabular-nums shrink-0" style={{ color: colors.text }}>
-              {Math.round((total > 0 ? slice.value / total : 0) * 100)}%
-            </span>
-          </div>
-        ))}
-      </div>
-    </Panel>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Shared: trend line                                                        */
-/* -------------------------------------------------------------------------- */
 
 /** Catmull-Rom to cubic bezier, so the line flows instead of reading as a polyline. */
 function smoothPath(points: { x: number; y: number }[]): string {
@@ -276,32 +151,14 @@ export interface TrendThreshold {
   color: string;
 }
 
-interface TrendProps {
-  title: string;
-  meta?: string;
-  delay?: number;
-  series: number[];
-  /** Fixed, labelled y-axis bounds — never the data range. */
-  yMin: number;
-  yMax: number;
-  ticks: number[];
-  thresholds?: TrendThreshold[];
-  /** Must be unique on the page; two instances would otherwise share one gradient. */
-  gradientId: string;
-  ariaLabel: string;
-}
-
 /**
  * Smoothed area line over `MONTHS`.
  *
- * The y-axis is always a fixed, labelled band rather than the data range, so a small
- * move doesn't render as a cliff — but it is labelled, because a silently cropped axis
- * is how charts lie. Optional thresholds draw reference lines in.
+ * The y-axis is always a fixed, labelled band rather than the data range, so a small move
+ * doesn't render as a cliff — but it is labelled, because a silently cropped axis is how
+ * charts lie. Optional thresholds draw reference lines in.
  */
-export function TrendLineChart({
-  title,
-  meta,
-  delay = 0,
+export function TrendLineBody({
   series,
   yMin,
   yMax,
@@ -309,13 +166,25 @@ export function TrendLineChart({
   thresholds = [],
   gradientId,
   ariaLabel,
-}: TrendProps) {
+}: {
+  series: number[];
+  yMin: number;
+  yMax: number;
+  ticks: number[];
+  thresholds?: TrendThreshold[];
+  /** Must be unique on the page; two instances would otherwise share one gradient. */
+  gradientId: string;
+  ariaLabel: string;
+}) {
   const colors = useTheme();
 
-  const w = 420;
-  const h = 380;
-  const padX = 30;
-  const padY = 14;
+  // Wide viewBox to match the full-width card, so the plot renders about 340px tall
+  // instead of scaling its height off a narrow aspect ratio. It also keeps the axis
+  // labels at their true 11px — a narrow viewBox stretched to full width shrinks them.
+  const w = 1000;
+  const h = 340;
+  const padX = 46;
+  const padY = 20;
 
   const x = (i: number) => padX + (i / (series.length - 1)) * (w - padX - 10);
   const y = (value: number) => padY + (1 - (value - yMin) / (yMax - yMin)) * (h - padY * 2);
@@ -326,14 +195,8 @@ export function TrendLineChart({
   const last = points[points.length - 1];
 
   return (
-    <Panel title={title} meta={meta} delay={delay}>
-      {/* my-auto centres the plot in the free space — same reasoning as the gauge. */}
-      <svg
-        viewBox={`0 0 ${w} ${h}`}
-        className="w-full h-auto my-auto"
-        role="img"
-        aria-label={ariaLabel}
-      >
+    <div className="flex flex-col flex-1 justify-center">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" role="img" aria-label={ariaLabel}>
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#7C3AED" stopOpacity="0.22" />
@@ -343,7 +206,14 @@ export function TrendLineChart({
 
         {ticks.map((tick) => (
           <g key={tick}>
-            <line x1={padX} y1={y(tick)} x2={w - 10} y2={y(tick)} stroke={colors.border} strokeWidth="1" />
+            <line
+              x1={padX}
+              y1={y(tick)}
+              x2={w - 10}
+              y2={y(tick)}
+              stroke={colors.border}
+              strokeWidth="1"
+            />
             <text x={2} y={y(tick) + 4} fontSize="11" fill={colors.textMuted} fontFamily="monospace">
               {tick}
             </text>
@@ -380,7 +250,7 @@ export function TrendLineChart({
           fill={`url(#${gradientId})`}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
         />
 
         <motion.path
@@ -391,7 +261,7 @@ export function TrendLineChart({
           strokeLinecap="round"
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
-          transition={{ duration: 1.2, delay: 0.45, ease }}
+          transition={{ duration: 1.2, delay: 0.2, ease }}
         />
 
         <motion.circle
@@ -403,7 +273,7 @@ export function TrendLineChart({
           strokeWidth="2"
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          transition={{ duration: 0.4, delay: 1.5, ease }}
+          transition={{ duration: 0.4, delay: 1.2, ease }}
         />
       </svg>
 
@@ -415,6 +285,120 @@ export function TrendLineChart({
           <span key={month} className="font-mono text-[8px]" style={{ color: colors.textMuted }}>
             {month}
           </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Donut                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface DonutSlice {
+  label: string;
+  hint: string;
+  value: number;
+  color: string;
+}
+
+/** Donut of how a fixed pot of capital is split. */
+export function AllocationDonut({
+  title,
+  right,
+  delay = 0,
+  slices,
+  centerLabel,
+  formatCenter = formatCompact,
+  ariaLabel,
+}: {
+  title: string;
+  right?: React.ReactNode;
+  delay?: number;
+  slices: DonutSlice[];
+  centerLabel: string;
+  formatCenter?: (total: number) => string;
+  ariaLabel: string;
+}) {
+  const colors = useTheme();
+
+  const total = slices.reduce((sum, slice) => sum + slice.value, 0);
+  const size = 148;
+  const stroke = 16;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  // Each slice is an arc offset by the sum of the slices before it. Computed purely —
+  // accumulating into a variable during the render map trips the React Compiler.
+  const fractions = slices.map((slice) => (total > 0 ? slice.value / total : 0));
+  const offsets = fractions.map((_, i) => fractions.slice(0, i).reduce((a, b) => a + b, 0));
+
+  return (
+    <Panel title={title} right={right} delay={delay}>
+      <div className="relative my-auto mx-auto" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90" role="img" aria-label={ariaLabel}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(0,0,0,0.05)"
+            strokeWidth={stroke}
+          />
+          {slices.map((slice, i) => {
+            const dash = fractions[i] * circumference;
+            const offset = offsets[i] * circumference;
+            return (
+              <motion.circle
+                key={slice.label}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth={stroke}
+                strokeLinecap="butt"
+                strokeDasharray={`${dash} ${circumference - dash}`}
+                initial={{ strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset: -offset }}
+                transition={{ duration: 0.9, delay: 0.2 + i * 0.1, ease }}
+              />
+            );
+          })}
+        </svg>
+
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span
+            className="font-mono text-[8px] uppercase tracking-widest"
+            style={{ color: colors.textMuted }}
+          >
+            {centerLabel}
+          </span>
+          <span className="font-serif text-lg font-semibold tabular-nums" style={{ color: colors.text }}>
+            {formatCenter(total)}
+          </span>
+        </div>
+      </div>
+
+      <div className="pt-5 space-y-2.5">
+        {slices.map((slice) => (
+          <div key={slice.label} className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: slice.color }} />
+            <div className="min-w-0 flex-1">
+              <div className="font-sans text-[11px]" style={{ color: colors.text }}>
+                {slice.label}
+              </div>
+              <div className="font-mono text-[9px] truncate" style={{ color: colors.textMuted }}>
+                {slice.hint}
+              </div>
+            </div>
+            <span
+              className="font-mono text-[10px] tabular-nums shrink-0"
+              style={{ color: colors.text }}
+            >
+              {Math.round((total > 0 ? slice.value / total : 0) * 100)}%
+            </span>
+          </div>
         ))}
       </div>
     </Panel>

@@ -1,20 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
-import StatCards from '@/components/dashboard/StatCards';
-import { AllocationDonut, TrendLineChart } from '@/components/dashboard/PortfolioCharts';
-import {
-  APY_SERIES,
-  DEPOSITED_SERIES,
-  blendedApy,
-  poolName,
-  positionDeposited,
-  positionValue,
-  YIELD_SERIES,
-  type LendingPosition,
-} from '@/lib/position';
+import { AllocationDonut } from '@/components/dashboard/PortfolioCharts';
+import { poolName, positionValue, type LendingPosition } from '@/lib/position';
 import type { PoolId } from '@/lib/markets';
-import type { StatCard } from '@/lib/portfolio';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -35,53 +24,13 @@ function formatPct(value: number, digits = 1): string {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
-/** Headline figures for the lender row. Same shape as the borrower cards. */
-function lendingCards(lending: LendingPosition): StatCard[] {
-  const deposited = positionDeposited(lending);
-  const apy = blendedApy(lending);
-  const single = lending.holdings.length === 1 ? lending.holdings[0] : null;
-
-  return [
-    {
-      label: 'Deposited',
-      value: formatUsd(deposited),
-      delta: `${lending.holdings.length} ${lending.holdings.length === 1 ? 'pool' : 'pools'}`,
-      tone: 'neutral',
-      series: DEPOSITED_SERIES,
-    },
-    {
-      label: 'Current APY',
-      value: formatPct(apy, 2),
-      delta: 'variable',
-      tone: 'good',
-      // Last point is the live figure, so the sparkline can't drift from the number.
-      series: [...APY_SERIES, apy * 100],
-    },
-    {
-      label: 'Accrued yield',
-      value: formatUsd(lending.accruedYield, 2),
-      delta: `+${formatUsd(lending.yieldLast30d, 2)} / 30d`,
-      tone: 'good',
-      series: YIELD_SERIES,
-    },
-    {
-      label: single ? 'Pool' : 'Pools',
-      value: single ? poolName(single.pool) : String(lending.holdings.length),
-      delta: single ? `${formatPct(single.apy, 2)} APY` : 'weighted APY',
-      tone: 'neutral',
-      // No sparkline — which pool you're in has no shape over time.
-    },
-  ];
-}
-
-/* -------------------------------------------------------------------------- */
-
 /**
- * Pool health plus the withdraw action.
+ * Pool health plus the withdraw action — the lender's risk figure and the lender's action,
+ * which is all this section needs to be.
  *
- * Utilization and reserve buffer are the same number from two sides — they sum to 100% —
- * but lenders look for both, so both are shown. Utilization is the risk figure: the
- * higher it is, the more of the pool is out on loan when a withdrawal lands.
+ * Utilization and reserve buffer are the same number from two sides, but lenders look for
+ * both, so both are shown. Utilization is the risk figure: the higher it is, the more of
+ * the pool is out on loan when a withdrawal lands.
  */
 function PoolHealthCard({ lending }: { lending: LendingPosition }) {
   const colors = useTheme();
@@ -93,13 +42,15 @@ function PoolHealthCard({ lending }: { lending: LendingPosition }) {
 
   // Utilization is weighted across holdings, so name the pool only when there is one.
   const label =
-    lending.holdings.length === 1 ? poolName(lending.holdings[0].pool) : `${lending.holdings.length} pools`;
+    lending.holdings.length === 1
+      ? poolName(lending.holdings[0].pool)
+      : `${lending.holdings.length} pools`;
 
   const meters = [
     {
       label: 'Reserve buffer',
       value: reserveBuffer,
-      color: '#639922',
+      color: reserveBuffer < 0.3 ? '#BA7517' : '#639922',
       hint: 'undrawn and available',
     },
     {
@@ -134,14 +85,23 @@ function PoolHealthCard({ lending }: { lending: LendingPosition }) {
         {meters.map((meter) => (
           <div key={meter.label}>
             <div className="flex items-baseline justify-between mb-2">
-              <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: colors.textMuted }}>
+              <span
+                className="font-mono text-[9px] uppercase tracking-widest"
+                style={{ color: colors.textMuted }}
+              >
                 {meter.label}
               </span>
-              <span className="font-serif text-lg font-semibold tabular-nums" style={{ color: colors.text }}>
+              <span
+                className="font-serif text-lg font-semibold tabular-nums"
+                style={{ color: colors.text }}
+              >
                 {Math.round(meter.value * 100)}%
               </span>
             </div>
-            <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.06)' }}>
+            <div
+              className="h-1.5 rounded-full overflow-hidden"
+              style={{ backgroundColor: 'rgba(0,0,0,0.06)' }}
+            >
               <motion.div
                 className="h-full rounded-full"
                 style={{ backgroundColor: meter.color }}
@@ -205,57 +165,38 @@ function PoolHealthCard({ lending }: { lending: LendingPosition }) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-
 /**
- * The lender half of the dashboard. Renders only when there is an active deposit —
- * see `Dashboard`, which decides that.
+ * The lender half of the dashboard: pool health and the action, plus the tranche split
+ * when there is more than one tranche to split.
  *
- * Reuses the borrower charts rather than introducing new ones: `TrendLineChart` for the
- * yield curve and `AllocationDonut` for the tranche split, the latter only when there is
- * more than one tranche to split.
+ * Deliberately small. The headline lending figures live in the positions deck and the
+ * yield curve lives in the History chart's Yield tab — repeating them here was the bulk of
+ * what made the dashboard read like a report rather than a dashboard.
  */
 export default function LendingSection({ lending }: { lending: LendingPosition }) {
   const multiPool = lending.holdings.length > 1;
 
   const poolSlices = lending.holdings.map((holding) => ({
     label: poolName(holding.pool),
-    hint: `${formatUsd(holding.deposited)} deposited · ${formatPct(holding.apy, 2)} APY`,
+    hint: `${formatUsd(holding.deposited)} · ${formatPct(holding.apy, 2)} APY`,
     value: holding.value,
     color: POOL_COLORS[holding.pool],
   }));
 
   return (
-    <div className="space-y-4">
-      <StatCards cards={lendingCards(lending)} />
+    <div className={`grid gap-4 ${multiPool ? 'grid-cols-[1.4fr_1fr]' : 'grid-cols-1'}`}>
+      <PoolHealthCard lending={lending} />
 
-      <div className={`grid gap-4 ${multiPool ? 'grid-cols-[1.15fr_1fr_1fr]' : 'grid-cols-[1.15fr_1fr]'}`}>
-        <PoolHealthCard lending={lending} />
-
-        <TrendLineChart
-          title="Yield history"
-          meta="+14.7%"
+      {multiPool && (
+        <AllocationDonut
+          title="Across pools"
           delay={0.3}
-          series={YIELD_SERIES}
-          yMin={0}
-          yMax={200}
-          ticks={[0, 50, 100, 150, 200]}
-          gradientId="yield-fill"
-          ariaLabel="Accrued yield by month"
+          slices={poolSlices}
+          centerLabel="Deposited"
+          formatCenter={(total) => formatUsd(total)}
+          ariaLabel="Deposited capital split across lending pools"
         />
-
-        {multiPool && (
-          <AllocationDonut
-            title="Capital allocation across pools"
-            meta={formatUsd(positionValue(lending))}
-            delay={0.35}
-            slices={poolSlices}
-            centerLabel="Deposited"
-            formatCenter={(total) => formatUsd(total)}
-            ariaLabel="Deposited capital split across lending pools"
-          />
-        )}
-      </div>
+      )}
     </div>
   );
 }

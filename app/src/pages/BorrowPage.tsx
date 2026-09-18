@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Search } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import TierLadder from '@/components/dashboard/TierLadder';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
 import MarketTable from '@/components/borrow/MarketTable';
 import BorrowFlow from '@/components/borrow/BorrowFlow';
@@ -219,6 +220,9 @@ export default function BorrowPage() {
               <p className="font-mono text-[10px]" style={{ color: colors.textMuted }}>
                 Rates shown are base rates. Your score moves your collateral ratio, not the market rate.
               </p>
+
+              {/* The ladder belongs here, where the trade-off is the live question. */}
+              <TierLadder />
             </div>
           )}
         </div>
