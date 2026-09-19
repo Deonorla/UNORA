@@ -46,8 +46,12 @@ export default function TokenIcon({
   if (Logo) {
     return (
       <span
-        className="flex items-center justify-center shrink-0"
-        style={{ width: size, height: size }}
+        className="flex items-center justify-center shrink-0 rounded-full"
+        style={{
+          width: size,
+          height: size,
+          backgroundColor: symbol.toUpperCase() === 'WBTC' ? '#F7931A' : 'transparent',
+        }}
       >
         <Logo size={size} variant="branded" />
       </span>
