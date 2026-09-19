@@ -74,7 +74,7 @@ export default function NetSummary({ position }: { position: WalletPosition }) {
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-4 mb-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
       {figures.map((figure, i) => (
         <motion.div
           key={figure.label}

@@ -20,7 +20,7 @@ export default function Navbar() {
       initial={false}
     >
       <motion.nav
-        className="w-full max-w-[1200px] flex items-center justify-between transition-all duration-500 ease-out"
+        className="w-full max-w-7xl flex items-center justify-between transition-all duration-500 ease-out"
         animate={{
           paddingLeft: scrolled ? '28px' : '24px',
           paddingRight: scrolled ? '28px' : '24px',
@@ -46,10 +46,10 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-7 font-sans text-sm transition-colors duration-300"
           style={{ color: colors.textSecondary }}
         >
-          <a href="#" className="hover:text-[#111111] transition-colors">Protocol</a>
           <a href="#how-it-works" className="hover:text-[#111111] transition-colors">How it works</a>
           <a href="#markets" className="hover:text-[#111111] transition-colors">Markets</a>
-          <a href="#" className="hover:text-[#111111] transition-colors">Docs</a>
+          <a href="#trust" className="hover:text-[#111111] transition-colors">Trust</a>
+          <a href="#faq" className="hover:text-[#111111] transition-colors">FAQ</a>
         </nav>
 
         <Link

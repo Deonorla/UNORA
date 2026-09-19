@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import {
   LayoutDashboard,
   ArrowUpRight,
@@ -14,6 +15,7 @@ import {
   Link2,
   PanelLeftClose,
   PanelLeftOpen,
+  X,
 } from 'lucide-react';
 
 /** Width of the rail when collapsed, and of the full sidebar. */
@@ -59,25 +61,40 @@ const actionGroups = [
   },
 ];
 
-interface Props {
-  collapsed: boolean;
-  onToggle: () => void;
-}
-
-export default function DashboardSidebar({ collapsed, onToggle }: Props) {
+/**
+ * The rail.
+ *
+ * One component, two behaviours: a permanent rail that collapses to icons on `lg` and up, and
+ * an off-canvas drawer below it. The drawer is always full width and never collapsed — there
+ * is nothing to save space for when it is already floating over the page.
+ */
+export default function DashboardSidebar() {
   const colors = useTheme();
   const location = useLocation();
+  const {
+    collapsed: railCollapsed,
+    toggleCollapsed,
+    mobileOpen,
+    closeMobile,
+    isDesktop,
+  } = useSidebar();
+
+  const collapsed = isDesktop && railCollapsed;
+  const hidden = !isDesktop && !mobileOpen;
 
   return (
     <aside
-      className="fixed left-0 top-0 bottom-0 flex flex-col z-10 border-r transition-[width] duration-300"
+      className="fixed left-0 top-0 bottom-0 z-30 flex flex-col border-r transition-[width,transform] duration-300"
       style={{
         width: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W,
-        backgroundColor: 'rgba(248, 245, 242, 0.95)',
+        backgroundColor: 'rgba(248, 245, 242, 0.98)',
         borderColor: colors.border,
+        transform: hidden ? 'translateX(-100%)' : 'translateX(0)',
+        boxShadow: isDesktop ? 'none' : '0 12px 40px rgba(24, 20, 32, 0.12)',
       }}
+      aria-hidden={hidden}
     >
-      {/* Logo + collapse toggle */}
+      {/* Logo + rail controls */}
       <div
         className={
           collapsed
@@ -85,29 +102,52 @@ export default function DashboardSidebar({ collapsed, onToggle }: Props) {
             : 'h-16 flex items-center justify-between px-5 shrink-0'
         }
       >
-        <Link to="/" className="flex items-center gap-2" title="Unora">
+        <Link to="/" className="flex items-center gap-2" title="Unora" onClick={closeMobile}>
           <img src="/Unora icon.png" alt="" className="h-6 w-auto" />
           {!collapsed && (
-            <span className="font-serif font-bold text-lg whitespace-nowrap" style={{ color: colors.text }}>
+            <span
+              className="font-serif font-bold text-lg whitespace-nowrap"
+              style={{ color: colors.text }}
+            >
               Unora
             </span>
           )}
         </Link>
 
-        <button
-          type="button"
-          onClick={onToggle}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          aria-expanded={!collapsed}
-          className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-white shrink-0"
-          style={{ borderColor: colors.border }}
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="w-4 h-4" style={{ color: colors.textMuted }} strokeWidth={1.5} />
-          ) : (
-            <PanelLeftClose className="w-4 h-4" style={{ color: colors.textMuted }} strokeWidth={1.5} />
-          )}
-        </button>
+        {isDesktop ? (
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+            className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-white shrink-0"
+            style={{ borderColor: colors.border }}
+          >
+            {collapsed ? (
+              <PanelLeftOpen
+                className="w-4 h-4"
+                style={{ color: colors.textMuted }}
+                strokeWidth={1.5}
+              />
+            ) : (
+              <PanelLeftClose
+                className="w-4 h-4"
+                style={{ color: colors.textMuted }}
+                strokeWidth={1.5}
+              />
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={closeMobile}
+            aria-label="Close menu"
+            className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-white shrink-0"
+            style={{ borderColor: colors.border }}
+          >
+            <X className="w-4 h-4" style={{ color: colors.textMuted }} strokeWidth={1.5} />
+          </button>
+        )}
       </div>
 
       <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-3' : 'px-4'}`}>
@@ -120,6 +160,7 @@ export default function DashboardSidebar({ collapsed, onToggle }: Props) {
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={closeMobile}
                 title={collapsed ? item.label : undefined}
                 aria-current={isActive ? 'page' : undefined}
                 className={`flex flex-col items-center rounded-xl transition-all ${
@@ -132,7 +173,9 @@ export default function DashboardSidebar({ collapsed, onToggle }: Props) {
               >
                 <Icon className="w-4 h-4" strokeWidth={1.5} />
                 {!collapsed && (
-                  <span className="font-sans text-[10px] font-medium whitespace-nowrap">{item.label}</span>
+                  <span className="font-sans text-[10px] font-medium whitespace-nowrap">
+                    {item.label}
+                  </span>
                 )}
               </Link>
             );
@@ -160,6 +203,7 @@ export default function DashboardSidebar({ collapsed, onToggle }: Props) {
                     <Link
                       key={item.label}
                       to={item.path}
+                      onClick={closeMobile}
                       title={collapsed ? item.label : undefined}
                       className={`w-full flex items-center rounded-xl transition-colors hover:bg-white/60 ${
                         collapsed ? 'justify-center p-3' : 'gap-3 px-3 py-2.5'
@@ -190,7 +234,10 @@ export default function DashboardSidebar({ collapsed, onToggle }: Props) {
       {/* Promo — hidden on the rail, where there is no room for the copy */}
       {!collapsed && (
         <div className="p-4 mt-auto shrink-0">
-          <div className="p-4 rounded-2xl relative overflow-hidden" style={{ backgroundColor: '#7C3AED' }}>
+          <div
+            className="p-4 rounded-2xl relative overflow-hidden"
+            style={{ backgroundColor: '#7C3AED' }}
+          >
             <div className="relative z-10">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="font-sans text-xs font-bold text-white">Pro</span>

@@ -39,7 +39,9 @@ export default function TierLadder() {
         </span>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* Three across only where there is room. At 390px each card gets ~100px, which is
+          narrower than its own contents — the badge and the ceiling both spill out. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {rungs.map((tier, i) => {
           const meta = STATE_META[tier.state];
           return (
@@ -88,7 +90,10 @@ export default function TierLadder() {
                 </span>
               </div>
 
-              <div className="flex items-center gap-6 mt-4 pt-3.5 border-t" style={{ borderColor: colors.border }}>
+              <div
+                className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-4 pt-3.5 border-t"
+                style={{ borderColor: colors.border }}
+              >
                 <div>
                   <div
                     className="font-mono text-[8px] uppercase tracking-widest"

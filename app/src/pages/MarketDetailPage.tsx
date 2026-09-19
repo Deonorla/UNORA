@@ -194,7 +194,10 @@ function RateModelChart({ market, live }: { market: Market; live: boolean }) {
         />
       </svg>
 
-      <div className="flex items-center gap-5 mt-4 pt-4 border-t" style={{ borderColor: colors.border }}>
+      <div
+        className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 pt-4 border-t"
+        style={{ borderColor: colors.border }}
+      >
         <span className="flex items-center gap-2">
           <span className="w-3 h-0.5 rounded-full" style={{ backgroundColor: '#BA7517' }} />
           <span className="font-mono text-[9px]" style={{ color: colors.textMuted }}>
@@ -303,7 +306,7 @@ export default function MarketDetailPage() {
     return (
       <DashboardLayout>
         <PageHeader title="Market not found" subtitle="That asset is not listed on Unora." />
-        <div className="max-w-[1100px] mx-auto px-8 py-8">
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           <Link
             to="/borrow"
             className="inline-flex items-center gap-2 font-sans text-sm"
@@ -359,7 +362,7 @@ export default function MarketDetailPage() {
         </Link>
       </PageHeader>
 
-      <div className="max-w-[1100px] mx-auto px-8 py-8 space-y-4">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-4">
         {/* Identity + headline figures */}
         <Card delay={0.05}>
           <div className="flex items-center gap-4 mb-5">
@@ -374,7 +377,7 @@ export default function MarketDetailPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4 pt-5 border-t" style={{ borderColor: colors.border }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-5 border-t" style={{ borderColor: colors.border }}>
             <Stat
               label="Total supplied"
               value={isLive ? formatCompactUsd(deposits) : '—'}
@@ -403,7 +406,7 @@ export default function MarketDetailPage() {
         {/* Your position — only when there is one */}
         {hasPosition && (
           <Card title="Your position" delay={0.1}>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <Stat
                 label="Supplied"
                 value={supplied > 0 ? formatFullUsd(Math.round(supplied)) : '—'}
@@ -428,7 +431,7 @@ export default function MarketDetailPage() {
         <RateModelChart market={market} live={isLive} />
 
         {/* Supply / borrow parameters */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card title="Supply info" delay={0.3}>
             <div className="space-y-3.5">
               <div className="flex items-baseline justify-between">

@@ -58,7 +58,7 @@ export default function WithdrawDialog({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
       <motion.div
         className="absolute inset-0"
         style={{
@@ -78,7 +78,7 @@ export default function WithdrawDialog({
         initial={{ opacity: 0, y: 16, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease }}
-        className="relative w-full max-w-[420px] rounded-2xl border shadow-2xl p-6"
+        className="relative w-full max-w-[420px] max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border shadow-2xl p-5 sm:p-6"
         style={{ borderColor: colors.border, backgroundColor: '#FFFDFB' }}
       >
         <button

@@ -131,7 +131,7 @@ export default function LendingSection({ lending }: { lending: LendingPosition }
   }));
 
   return (
-    <div className={`grid gap-4 ${multiPool ? 'grid-cols-[1.4fr_1fr]' : 'grid-cols-1'}`}>
+    <div className={`grid gap-4 ${multiPool ? 'grid-cols-1 lg:grid-cols-[1.4fr_1fr]' : 'grid-cols-1'}`}>
       <PoolHealthCard lending={lending} />
 
       {multiPool && (

@@ -41,13 +41,13 @@ export default function ActivityPage() {
           subtitle="Every protocol event on your wallet — stream ticks, repayments, score changes, and sponsorship movements."
         />
 
-        <div className="max-w-[1100px] mx-auto px-8 py-8">
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {/* Summary */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.08, ease }}
-            className="grid grid-cols-3 gap-4 mb-6"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"
           >
             <div className="p-4 rounded-2xl border shadow-sm" style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}>
               <div className="font-mono text-[9px] uppercase tracking-widest mb-1" style={{ color: colors.textMuted }}>Events recorded</div>
@@ -95,11 +95,11 @@ export default function ActivityPage() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2, ease }}
-            className="rounded-2xl border shadow-sm overflow-hidden"
+            className="rounded-2xl border shadow-sm overflow-x-auto"
             style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
           >
             <div
-              className="grid grid-cols-[2.2fr_1fr_100px] gap-4 px-6 py-3 border-b text-[10px] font-mono uppercase tracking-widest"
+              className="grid grid-cols-[minmax(0,2.2fr)_1fr_84px] gap-3 sm:gap-4 px-4 sm:px-6 py-3 border-b text-[10px] font-mono uppercase tracking-widest min-w-[560px]"
               style={{ borderColor: colors.border, color: colors.textMuted }}
             >
               <span>Event</span>
@@ -120,7 +120,7 @@ export default function ActivityPage() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 10 }}
                     transition={{ duration: 0.28, delay: Math.min(i * 0.025, 0.3), ease }}
-                    className="grid grid-cols-[2.2fr_1fr_100px] gap-4 px-6 py-3.5 border-b last:border-b-0 items-center transition-colors hover:bg-purple-50/30"
+                    className="grid grid-cols-[minmax(0,2.2fr)_1fr_84px] gap-3 sm:gap-4 px-4 sm:px-6 py-3.5 border-b last:border-b-0 items-center transition-colors hover:bg-purple-50/30 min-w-[560px]"
                     style={{ borderColor: colors.border }}
                   >
                     <div className="flex items-center gap-3">

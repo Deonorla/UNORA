@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { Lock, Check, ChevronUp, Handshake } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { SCORE } from '@/lib/protocol';
 import {
   BORROW_POSITION,
@@ -17,15 +18,24 @@ const ease = [0.22, 1, 0.36, 1] as const;
 const CARD_W = 320;
 const CARD_H = 224;
 /**
- * Horizontal step between stacked cards, and therefore exactly how much of a side card
- * stays visible. Card content is left-aligned, so the step has to exceed the card's own
- * padding or the label slides under the front card.
+ * Horizontal step between stacked cards, and therefore exactly how much of a side card stays
+ * visible. Card content is left-aligned, so the step has to exceed the card's own padding or
+ * the label slides under the front card.
  */
 const SPREAD = 296;
 
 /**
- * Colour carries meaning across the three cards: purple is identity, green is money
- * coming in, amber is money owed. The badge carries the finer status.
+ * Below this the fan is replaced by a plain stack — see `PositionsDeck`.
+ *
+ * `xl`, not `md`. The fanned deck spans 2 x SPREAD + CARD_W = 912px, and the content column
+ * only offers that much at 1280 once the 240px rail and the page gutters are subtracted. At
+ * 1024 it has 720px, so a fan there pushes the outer two cards off-screen.
+ */
+const FAN_QUERY = '(min-width: 1280px)';
+
+/**
+ * Colour carries meaning across the three cards: purple is identity, green is money coming in,
+ * amber is money owed. The badge carries the finer status.
  */
 const TONE = {
   score: { color: '#7C3AED', fill: '#E7DBF1' },
@@ -58,8 +68,8 @@ function pct(value: number, digits = 2): string {
 
 /**
  * Builds the cards the wallet actually holds. Each entry is something owned, so the deck
- * doubles as the conditional rendering — a wallet with only a score gets one card, a
- * wallet doing both gets three.
+ * doubles as the conditional rendering — a wallet with only a score gets one card, a wallet
+ * doing both gets three.
  */
 function buildCards(position: WalletPosition): DeckCard[] {
   const cards: DeckCard[] = [];
@@ -124,26 +134,133 @@ function buildCards(position: WalletPosition): DeckCard[] {
   return cards;
 }
 
+/** The card's contents, shared by the fan and the stacked layout. */
+function CardBody({ card, showChevron }: { card: DeckCard; showChevron?: boolean }) {
+  return (
+    <>
+      {/* Wordmark + status badge */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-1.5">
+          <img src="/Unora icon.png" alt="" className="h-4 w-auto" />
+          <span className="font-serif font-bold text-sm" style={{ color: '#111111' }}>
+            Unora
+          </span>
+        </div>
+
+        <div
+          className="flex items-center gap-1 px-2 py-1 rounded-full shrink-0"
+          style={{ backgroundColor: `${card.color}1F` }}
+        >
+          {card.locked ? (
+            <Lock className="w-2.5 h-2.5" style={{ color: card.color }} strokeWidth={2} />
+          ) : card.key === 'borrow' ? (
+            <Handshake className="w-2.5 h-2.5" style={{ color: card.color }} strokeWidth={2} />
+          ) : (
+            <Check className="w-2.5 h-2.5" style={{ color: card.color }} strokeWidth={2.5} />
+          )}
+          <span
+            className="font-mono text-[9px] uppercase tracking-widest"
+            style={{ color: card.color }}
+          >
+            {card.badge}
+          </span>
+        </div>
+      </div>
+
+      {/* What this card is */}
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className="font-mono text-[9px] uppercase tracking-widest"
+          style={{ color: '#6B6A66' }}
+        >
+          {card.label}
+        </span>
+        {showChevron && (
+          <ChevronUp className="w-3.5 h-3.5 shrink-0" style={{ color: card.color }} strokeWidth={2} />
+        )}
+      </div>
+
+      {/* The figure */}
+      <div className="mt-auto flex items-baseline gap-2">
+        <span
+          className="font-serif text-4xl font-semibold tabular-nums leading-none"
+          style={{ color: '#111111' }}
+        >
+          {card.value}
+        </span>
+      </div>
+      <div className="font-mono text-[9px] mt-1.5" style={{ color: card.color }}>
+        {card.sub}
+      </div>
+
+      {/* Supporting detail */}
+      <div
+        className="flex items-center gap-7 mt-3.5 pt-3.5 border-t"
+        style={{ borderColor: `${card.color}33` }}
+      >
+        {card.fields.map((field) => (
+          <div key={field.label}>
+            <div
+              className="font-mono text-[8px] uppercase tracking-widest"
+              style={{ color: '#6B6A66' }}
+            >
+              {field.label}
+            </div>
+            <div className="font-mono text-sm tabular-nums" style={{ color: '#111111' }}>
+              {field.value}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 /**
- * Fanned deck of the wallet's positions. Front card is the wallet's identity — its
- * soulbound score — with the borrow and deposit positions behind it.
+ * Fanned deck of the wallet's positions. Front card is the wallet's identity — its soulbound
+ * score — with the borrow and deposit positions behind it.
  *
  * Clicking a card rotates it to the front rather than navigating; there is no per-position
  * page, and the point is comparing the three at a glance.
+ *
+ * Below `md` the fan is replaced by a stack. The cards are 320px wide and fanned ±296px, so
+ * on a phone the outer two are almost entirely off-screen and the deck becomes a horizontal
+ * scroll — the exact thing the fan exists to avoid.
  */
 export default function PositionsDeck({ position }: { position: WalletPosition }) {
   const cards = buildCards(position);
-
-  // Order is by deck position, front first.
   const [order, setOrder] = useState<number[]>(() => cards.map((_, i) => i));
+  const fan = useMediaQuery(FAN_QUERY);
 
   if (cards.length === 0) return null;
+
+  if (!fan) {
+    return (
+      <div className="space-y-3 mb-4">
+        {cards.map((card, i) => (
+          <motion.div
+            key={card.key}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.08 + i * 0.06, ease }}
+            className="rounded-3xl p-5 border shadow-lg flex flex-col"
+            style={{ backgroundColor: card.fill, borderColor: card.color }}
+          >
+            <CardBody card={card} />
+          </motion.div>
+        ))}
+      </div>
+    );
+  }
 
   const bringToFront = (index: number) =>
     setOrder((prev) => [index, ...prev.filter((i) => i !== index)]);
 
   // A card added since the last render (state change) won't be in `order` yet.
-  const ordered = [...order.filter((i) => i < cards.length), ...cards.map((_, i) => i).filter((i) => !order.includes(i))];
+  const ordered = [
+    ...order.filter((i) => i < cards.length),
+    ...cards.map((_, i) => i).filter((i) => !order.includes(i)),
+  ];
 
   return (
     <div
@@ -203,77 +320,7 @@ function PositionCard({
         cursor: isFront ? 'default' : 'pointer',
       }}
     >
-      {/* Wordmark + status badge */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-1.5">
-          <img src="/Unora icon.png" alt="" className="h-4 w-auto" />
-          <span className="font-serif font-bold text-sm" style={{ color: '#111111' }}>
-            Unora
-          </span>
-        </div>
-
-        <div
-          className="flex items-center gap-1 px-2 py-1 rounded-full shrink-0"
-          style={{ backgroundColor: `${card.color}1F` }}
-        >
-          {card.locked ? (
-            <Lock className="w-2.5 h-2.5" style={{ color: card.color }} strokeWidth={2} />
-          ) : card.key === 'borrow' ? (
-            <Handshake className="w-2.5 h-2.5" style={{ color: card.color }} strokeWidth={2} />
-          ) : (
-            <Check className="w-2.5 h-2.5" style={{ color: card.color }} strokeWidth={2.5} />
-          )}
-          <span
-            className="font-mono text-[9px] uppercase tracking-widest"
-            style={{ color: card.color }}
-          >
-            {card.badge}
-          </span>
-        </div>
-      </div>
-
-      {/* What this card is */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[9px] uppercase tracking-widest" style={{ color: '#6B6A66' }}>
-          {card.label}
-        </span>
-        {!isFront && (
-          <ChevronUp className="w-3.5 h-3.5 shrink-0" style={{ color: card.color }} strokeWidth={2} />
-        )}
-      </div>
-
-      {/* The figure */}
-      <div className="mt-auto flex items-baseline gap-2">
-        <span
-          className="font-serif text-4xl font-semibold tabular-nums leading-none"
-          style={{ color: '#111111' }}
-        >
-          {card.value}
-        </span>
-      </div>
-      <div className="font-mono text-[9px] mt-1.5" style={{ color: card.color }}>
-        {card.sub}
-      </div>
-
-      {/* Supporting detail */}
-      <div
-        className="flex items-center gap-7 mt-3.5 pt-3.5 border-t"
-        style={{ borderColor: `${card.color}33` }}
-      >
-        {card.fields.map((field) => (
-          <div key={field.label}>
-            <div
-              className="font-mono text-[8px] uppercase tracking-widest"
-              style={{ color: '#6B6A66' }}
-            >
-              {field.label}
-            </div>
-            <div className="font-mono text-sm tabular-nums" style={{ color: '#111111' }}>
-              {field.value}
-            </div>
-          </div>
-        ))}
-      </div>
+      <CardBody card={card} showChevron={!isFront} />
     </motion.button>
   );
 }

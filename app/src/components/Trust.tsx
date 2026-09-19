@@ -18,7 +18,7 @@ export default function Trust({ ready }: { ready: boolean }) {
   const colors = useTheme();
 
   return (
-    <section ref={ref} className="py-20 sm:py-28 px-6 sm:px-10 lg:px-16">
+    <section ref={ref} id="trust" className="py-20 sm:py-28 px-6 sm:px-10 lg:px-16">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

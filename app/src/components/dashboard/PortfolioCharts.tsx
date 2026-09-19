@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { MONTHS, BORROWED_SERIES, REPAID_SERIES, formatCompact } from '@/lib/portfolio';
@@ -104,15 +105,32 @@ export function ChartAnchor({ left, right }: { left: AnchorMetric; right: Anchor
 export function BorrowRepayBody() {
   const colors = useTheme();
   const max = Math.max(...BORROWED_SERIES, ...REPAID_SERIES);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   return (
     <div className="flex flex-col flex-1">
       <div className="flex items-end gap-1.5 flex-1 min-h-[130px]">
         {MONTHS.map((month, i) => (
-          <div key={month} className="flex-1 flex flex-col justify-end h-full">
+          <div
+            key={month}
+            className="flex-1 flex flex-col justify-end h-full relative cursor-pointer"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            {hoveredIdx === i && (
+              <div
+                className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md text-[9px] font-mono whitespace-nowrap z-10 border"
+                style={{ backgroundColor: '#EDE9FE', color: '#5B21B6', borderColor: '#DDD6FE' }}
+              >
+                {formatCompact(BORROWED_SERIES[i])}
+              </div>
+            )}
             <motion.div
               className="w-full rounded-t-[3px]"
-              style={{ backgroundColor: '#7C3AED' }}
+              style={{
+                backgroundColor: '#7C3AED',
+                opacity: hoveredIdx !== null && hoveredIdx !== i ? 0.4 : 1,
+              }}
               initial={{ height: 0 }}
               animate={{ height: `${(BORROWED_SERIES[i] / max) * 100}%` }}
               transition={{ duration: 0.7, delay: 0.15 + i * 0.04, ease }}
@@ -122,11 +140,15 @@ export function BorrowRepayBody() {
       </div>
 
       <div className="flex items-center gap-1.5 my-1.5">
-        {MONTHS.map((month) => (
+        {MONTHS.map((month, i) => (
           <div
             key={month}
             className="flex-1 text-center font-mono text-[8px] py-0.5"
-            style={{ color: colors.textMuted, borderTop: `1px solid ${colors.border}` }}
+            style={{
+              color: colors.textMuted,
+              borderTop: `1px solid ${colors.border}`,
+              fontWeight: hoveredIdx === i ? 600 : 400,
+            }}
           >
             {month}
           </div>
@@ -135,10 +157,26 @@ export function BorrowRepayBody() {
 
       <div className="flex items-start gap-1.5 flex-1 min-h-[130px]">
         {MONTHS.map((month, i) => (
-          <div key={month} className="flex-1 flex flex-col justify-start h-full">
+          <div
+            key={month}
+            className="flex-1 flex flex-col justify-start h-full relative cursor-pointer"
+            onMouseEnter={() => setHoveredIdx(i)}
+            onMouseLeave={() => setHoveredIdx(null)}
+          >
+            {hoveredIdx === i && (
+              <div
+                className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md text-[9px] font-mono whitespace-nowrap z-10 border"
+                style={{ backgroundColor: '#EDE9FE', color: '#5B21B6', borderColor: '#DDD6FE' }}
+              >
+                {formatCompact(REPAID_SERIES[i])}
+              </div>
+            )}
             <motion.div
               className="w-full rounded-b-[3px]"
-              style={{ backgroundColor: '#A78BFA' }}
+              style={{
+                backgroundColor: '#A78BFA',
+                opacity: hoveredIdx !== null && hoveredIdx !== i ? 0.4 : 1,
+              }}
               initial={{ height: 0 }}
               animate={{ height: `${(REPAID_SERIES[i] / max) * 100}%` }}
               transition={{ duration: 0.7, delay: 0.15 + i * 0.04, ease }}
@@ -189,6 +227,7 @@ export function TrendLineBody({
   thresholds = [],
   gradientId,
   ariaLabel,
+  formatValue,
 }: {
   series: number[];
   yMin: number;
@@ -198,8 +237,10 @@ export function TrendLineBody({
   /** Must be unique on the page; two instances would otherwise share one gradient. */
   gradientId: string;
   ariaLabel: string;
+  formatValue?: (value: number) => string;
 }) {
   const colors = useTheme();
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   // Wide viewBox to match the full-width card, so the plot renders about 340px tall
   // instead of scaling its height off a narrow aspect ratio. It also keeps the axis
@@ -274,6 +315,7 @@ export function TrendLineBody({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8, delay: 0.3 }}
+          style={{ pointerEvents: 'none' }}
         />
 
         <motion.path
@@ -285,8 +327,79 @@ export function TrendLineBody({
           initial={{ pathLength: 0 }}
           animate={{ pathLength: 1 }}
           transition={{ duration: 1.2, delay: 0.2, ease }}
+          style={{ pointerEvents: 'none' }}
         />
 
+        {/* Hover crosshair line */}
+        {hoveredIdx !== null && (
+          <line
+            x1={points[hoveredIdx].x}
+            y1={padY}
+            x2={points[hoveredIdx].x}
+            y2={h - padY}
+            stroke={colors.textMuted}
+            strokeWidth="1"
+            strokeDasharray="3 3"
+            opacity="0.5"
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+
+        {/* Visible dot + tooltip on hover */}
+        {hoveredIdx !== null && (
+          <g style={{ pointerEvents: 'none' }}>
+            <circle cx={points[hoveredIdx].x} cy={points[hoveredIdx].y} r="6" fill="#FFFFFF" stroke="#7C3AED" strokeWidth="2" />
+            <rect
+              x={points[hoveredIdx].x - 28}
+              y={points[hoveredIdx].y - 28}
+              width="56"
+              height="18"
+              rx="4"
+              fill="#EDE9FE"
+              stroke="#DDD6FE"
+              strokeWidth="1"
+            />
+            <text
+              x={points[hoveredIdx].x}
+              y={points[hoveredIdx].y - 16}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#5B21B6"
+              fontFamily="monospace"
+            >
+              {formatValue ? formatValue(series[hoveredIdx]) : formatCompact(series[hoveredIdx])}
+            </text>
+          </g>
+        )}
+
+        {/* Full-chart invisible overlay for mouse tracking */}
+        <rect
+          x={padX}
+          y={padY}
+          width={w - padX - 10}
+          height={h - padY * 2}
+          fill="transparent"
+          style={{ cursor: 'crosshair' }}
+          onMouseMove={(e) => {
+            const svg = e.currentTarget.closest('svg');
+            if (!svg) return;
+            const rect = svg.getBoundingClientRect();
+            const svgX = ((e.clientX - rect.left) / rect.width) * w;
+            let closest = 0;
+            let minDist = Infinity;
+            for (let i = 0; i < points.length; i++) {
+              const dist = Math.abs(points[i].x - svgX);
+              if (dist < minDist) {
+                minDist = dist;
+                closest = i;
+              }
+            }
+            setHoveredIdx(closest);
+          }}
+          onMouseLeave={() => setHoveredIdx(null)}
+        />
+
+        {/* Permanent end dot */}
         <motion.circle
           cx={last.x}
           cy={last.y}
@@ -297,6 +410,7 @@ export function TrendLineBody({
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ duration: 0.4, delay: 1.2, ease }}
+          style={{ pointerEvents: 'none' }}
         />
       </svg>
 
@@ -304,8 +418,15 @@ export function TrendLineBody({
         className="flex items-center justify-between mt-4 pt-3 border-t"
         style={{ borderColor: colors.border }}
       >
-        {MONTHS.map((month) => (
-          <span key={month} className="font-mono text-[8px]" style={{ color: colors.textMuted }}>
+        {MONTHS.map((month, i) => (
+          <span
+            key={month}
+            className="font-mono text-[8px]"
+            style={{
+              color: hoveredIdx === i ? colors.text : colors.textMuted,
+              fontWeight: hoveredIdx === i ? 600 : 400,
+            }}
+          >
             {month}
           </span>
         ))}

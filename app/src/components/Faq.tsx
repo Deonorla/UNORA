@@ -49,8 +49,10 @@ function FaqItem({ faq, isOpen, toggle, delay, show }: { faq: typeof faqs[0]; is
         <span className="font-serif text-base sm:text-lg tracking-tight" style={{ color: colors.text }}>
           {faq.q}
         </span>
+        {/* justify-center as well as items-center — with only items-center the icon sits
+            against the left edge of the circle instead of in the middle of it. */}
         <div
-          className="shrink-0 w-7 h-7 rounded-full flex items-center border border-white/40 bg-white/40 transition-colors"
+          className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center border border-white/40 bg-white/40 transition-colors"
           style={{ color: colors.text }}
         >
           {isOpen ? <Minus className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
@@ -83,7 +85,7 @@ export default function Faq({ ready }: { ready: boolean }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section ref={ref} className="py-10 sm:py-16 px-4 sm:px-6 lg:px-10">
+    <section ref={ref} id="faq" className="py-10 sm:py-16 px-4 sm:px-6 lg:px-10">
       <div className="max-w-7xl mx-auto rounded-3xl bg-white/70 backdrop-blur-md border border-white/50 shadow-[0_8px_40px_rgba(124,58,237,0.06)] p-8 sm:p-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16">
           <motion.div

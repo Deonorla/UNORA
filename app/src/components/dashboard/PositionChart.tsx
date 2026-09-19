@@ -134,10 +134,11 @@ export default function PositionChart({ position }: { position: WalletPosition }
 
   return (
     <Panel title="History" right={toggle} delay={0.2}>
-      {/* Fixed height so switching tabs doesn't shift the page beneath the card. No
-          flex-1 here — its flex-basis of 0 would override the height and let each tab
-          size to its own content, which is what caused the jump. */}
-      <div className="flex flex-col h-[454px]">
+      {/* Fixed height so switching tabs doesn't shift the page beneath the card. No flex-1
+          here — its flex-basis of 0 would override the height and let each tab size to its
+          own content, which is what caused the jump. Shorter below `lg`, where the bar
+          chart's eight columns get cramped. */}
+      <div className="flex flex-col h-[360px] lg:h-[454px]">
         <ChartAnchor left={active.primary} right={active.secondary} />
 
         {active.key === 'borrow' && <BorrowRepayBody />}
@@ -151,6 +152,7 @@ export default function PositionChart({ position }: { position: WalletPosition }
             thresholds={SCORE_THRESHOLDS}
             gradientId="score-fill"
             ariaLabel="Credit score by month"
+            formatValue={(v) => String(v)}
           />
         )}
 
@@ -162,6 +164,7 @@ export default function PositionChart({ position }: { position: WalletPosition }
             ticks={[0, 200, 400, 600]}
             gradientId="yield-fill"
             ariaLabel="Accrued yield by month"
+            formatValue={(v) => `$${v}`}
           />
         )}
       </div>

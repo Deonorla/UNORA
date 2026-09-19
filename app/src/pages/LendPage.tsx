@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, MoreHorizontal } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import PageHeader, { StatusNote } from '@/components/dashboard/PageHeader';
@@ -93,7 +93,7 @@ function StatCard({
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay, ease }}
-      className="p-4 rounded-2xl border shadow-sm flex items-start justify-between gap-3"
+      className="p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3"
       style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
     >
       <div className="min-w-0">
@@ -133,6 +133,18 @@ export default function LendPage() {
   const { search } = useLocation();
   const { position } = resolveWalletState(search);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Principal plus yield, so this figure equals the sum of the per-row balances below it.
   const deposited = position.lending ? positionValue(position.lending) : 0;
@@ -161,9 +173,9 @@ export default function LendPage() {
         note={<StatusNote>USDC live on Monad testnet · {soonCount} reserves rolling out</StatusNote>}
       />
 
-      <div className="max-w-[1100px] mx-auto px-8 py-8 space-y-6">
+      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 space-y-6">
         {/* Protocol totals, then the wallet's own position */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             label="Total deposits"
             value={formatCompactUsd(totalSupplied)}
@@ -274,13 +286,15 @@ export default function LendPage() {
               </div>
 
               {/* Pool table */}
+              {/* Scrolls sideways rather than clipping. `overflow-hidden` here silently cut
+                  off the right-hand columns below ~1100px with no way to reach them. */}
               <div
-                className="rounded-2xl border shadow-sm overflow-hidden"
+                className="rounded-2xl border shadow-sm overflow-x-auto"
                 style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.6)' }}
               >
                 <div
-                  className={`grid ${GRID} gap-4 px-6 py-3 border-b text-[10px] font-mono uppercase tracking-widest`}
-                  style={{ borderColor: colors.border, color: colors.textMuted }}
+                  className={`grid ${GRID} gap-4 px-4 sm:px-6 py-3 border-b text-[10px] font-mono uppercase tracking-widest min-w-[980px]`}
+                  style={{ borderColor: colors.border, color: colors.textMuted, fontWeight: 600, letterSpacing: '0.1em' }}
                 >
                   <span>Asset</span>
                   <span className="text-right">APY</span>
@@ -301,7 +315,7 @@ export default function LendPage() {
                   return (
                     <div
                       key={`${market.pool}-${market.symbol}`}
-                      className={`grid ${GRID} gap-4 px-6 py-4 border-b last:border-b-0 items-center transition-colors hover:bg-purple-50/30`}
+                      className={`grid ${GRID} gap-4 px-4 sm:px-6 py-4 border-b last:border-b-0 items-center transition-colors hover:bg-purple-50/30 min-w-[980px]`}
                       style={{ borderColor: colors.border, opacity: isSoon ? 0.6 : 1 }}
                     >
                       {/* Asset */}
@@ -390,23 +404,8 @@ export default function LendPage() {
                         </span>
                       </div>
 
-                      {/* Actions. The detail link is always present, including for
-                          undeployed reserves — the roadmap page is still worth reading. */}
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/borrow/${market.symbol}`}
-                          aria-label={`View ${market.symbol} details`}
-                          title="View details"
-                          className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-white shrink-0"
-                          style={{ borderColor: colors.border }}
-                        >
-                          <ArrowUpRight
-                            className="w-3.5 h-3.5"
-                            style={{ color: colors.textMuted }}
-                            strokeWidth={1.5}
-                          />
-                        </Link>
-
+                      {/* Actions */}
+                      <div className="flex justify-end relative" ref={openMenu === `${market.pool}-${market.symbol}` ? menuRef : undefined}>
                         {isSoon ? (
                           <span
                             className="px-3 py-2 rounded-lg font-mono text-[9px] uppercase tracking-widest whitespace-nowrap"
@@ -418,12 +417,40 @@ export default function LendPage() {
                             Coming soon
                           </span>
                         ) : (
-                          <button
-                            className="px-4 py-2 rounded-lg font-sans text-xs font-medium transition-all hover:opacity-90"
-                            style={{ backgroundColor: '#7C3AED', color: '#FFFFFF' }}
-                          >
-                            Deposit
-                          </button>
+                          <>
+                            <button
+                              onClick={() => setOpenMenu(openMenu === `${market.pool}-${market.symbol}` ? null : `${market.pool}-${market.symbol}`)}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors hover:bg-white"
+                              style={{ borderColor: colors.border }}
+                            >
+                              <MoreHorizontal className="w-4 h-4" style={{ color: colors.textMuted }} strokeWidth={2} />
+                            </button>
+
+                            {openMenu === `${market.pool}-${market.symbol}` && (
+                              <div
+                                className="absolute right-0 top-full mt-1 w-44 rounded-xl border shadow-lg z-20 overflow-hidden"
+                                style={{ borderColor: colors.border, backgroundColor: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)' }}
+                              >
+                                <button
+                                  onClick={() => setOpenMenu(null)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 font-sans text-xs transition-colors hover:bg-purple-50 text-left"
+                                  style={{ color: colors.text }}
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" style={{ color: '#7C3AED' }} strokeWidth={1.5} />
+                                  Deposit
+                                </button>
+                                <Link
+                                  to={`/borrow/${market.symbol}`}
+                                  onClick={() => setOpenMenu(null)}
+                                  className="w-full flex items-center gap-2.5 px-4 py-2.5 font-sans text-xs transition-colors hover:bg-purple-50"
+                                  style={{ color: colors.text }}
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" style={{ color: '#7C3AED' }} strokeWidth={1.5} />
+                                  View details
+                                </Link>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>

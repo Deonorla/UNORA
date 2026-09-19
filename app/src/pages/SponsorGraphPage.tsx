@@ -61,7 +61,7 @@ export default function SponsorGraphPage() {
           subtitle="Every edge is delegated capacity. If a sponsored wallet defaults, the sponsor's own capacity is slashed onchain — trust here has a price."
         />
 
-        <div className="max-w-[1100px] mx-auto px-8 py-8">
+        <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {/* Stats */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}

@@ -11,6 +11,17 @@ body {
   overflow-x: hidden;
 }
 
+/*
+ * Tailwind v4's preflight gives <button> `cursor: default`, matching the native control.
+ * That is right for a form full of incidental buttons, but wrong here — nearly every
+ * interaction in this app is a button, and an arrow cursor on the FAQ rows, the Deposit
+ * buttons and the withdraw dialog reads as "not clickable". Restore the pointer.
+ */
+button:not(:disabled),
+[role='button']:not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
 .font-serif { font-family: var(--font-serif); }
 .font-sans { font-family: var(--font-sans); }
 .font-mono { font-family: var(--font-mono); }

@@ -36,7 +36,7 @@ export default function Markets({ ready }: { ready: boolean }) {
   const colors = useTheme();
 
   return (
-    <section ref={ref} className="py-10 sm:py-16 px-4 sm:px-6 lg:px-10">
+    <section ref={ref} id="markets" className="py-10 sm:py-16 px-4 sm:px-6 lg:px-10">
       <div className="max-w-7xl mx-auto rounded-3xl bg-white/70 backdrop-blur-md border border-white/50 shadow-[0_8px_40px_rgba(124,58,237,0.06)] p-8 sm:p-12">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

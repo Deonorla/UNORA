@@ -1,46 +1,50 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import DashboardSidebar, { SIDEBAR_W, SIDEBAR_W_COLLAPSED } from './DashboardSidebar';
-
-const STORAGE_KEY = 'unora:sidebar-collapsed';
+import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext';
 
 /**
- * App shell for every signed-in page: fixed sidebar plus the scrolling content column.
+ * The shell itself, inside the provider so it can read the rail's state.
  *
- * The collapsed flag lives here rather than in each page because the sidebar's width and
- * the content's left margin have to move together. Persisted so the rail stays put across
- * navigations and reloads.
+ * Below `lg` the rail is off-canvas and the content takes the full width — a permanent 240px
+ * rail on a 390px phone leaves 150px for the page, which is not a layout.
  */
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEY) === '1';
-    } catch {
-      // Storage can throw in private mode — fall back to expanded.
-      return false;
-    }
-  });
-
-  const toggle = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
-      } catch {
-        /* not fatal — the rail just won't remember */
-      }
-      return next;
-    });
-  }, []);
+function Shell({ children }: { children: ReactNode }) {
+  const { collapsed, mobileOpen, closeMobile, isDesktop } = useSidebar();
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8F5F2' }}>
-      <DashboardSidebar collapsed={collapsed} onToggle={toggle} />
+      <DashboardSidebar />
+
+      {/* Drawer scrim. Under the rail (z-30), over the content. */}
+      {!isDesktop && mobileOpen && (
+        <div
+          className="fixed inset-0 z-20"
+          style={{ backgroundColor: 'rgba(24, 20, 32, 0.32)' }}
+          onClick={closeMobile}
+          aria-hidden="true"
+        />
+      )}
+
       <main
         className="min-h-screen transition-[margin-left] duration-300"
-        style={{ marginLeft: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W }}
+        style={{ marginLeft: isDesktop ? (collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W) : 0 }}
       >
         {children}
       </main>
     </div>
+  );
+}
+
+/**
+ * App shell for every signed-in page: the rail plus the scrolling content column.
+ *
+ * The rail's state lives here rather than in each page because its width and the content's
+ * left margin have to move together.
+ */
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return (
+    <SidebarProvider>
+      <Shell>{children}</Shell>
+    </SidebarProvider>
   );
 }

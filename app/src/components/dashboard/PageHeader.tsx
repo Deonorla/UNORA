@@ -1,6 +1,8 @@
 import { motion } from 'motion/react';
 import type { ReactNode } from 'react';
+import { Menu } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useSidebar } from '@/contexts/SidebarContext';
 import ConnectWalletButton from '@/components/ConnectWalletButton';
 import GlobalSearch from '@/components/dashboard/GlobalSearch';
 import { useUnoraWallet } from '@/hooks/useUnoraWallet';
@@ -25,19 +27,24 @@ interface Props {
 }
 
 /**
- * The page header. Pinned to the top of the scroll container so the title and the
- * connect button stay reachable while the table scrolls.
+ * The page header. Pinned to the top of the scroll container so the title and the connect
+ * button stay reachable while the table scrolls.
  *
- * Signed out, this collapses to exactly two things — the page name and the connect
- * button. Subtitle, status note and the right-hand slot all appear only once there is
- * a wallet, so a visitor never sees stats or copy describing an account they don't have.
+ * Signed out, this collapses to exactly two things — the page name and the connect button.
+ * Subtitle, status note and the right-hand slot all appear only once there is a wallet, so a
+ * visitor never sees stats or copy describing an account they don't have.
  *
- * The translucent background matters — a fully opaque bar would read as a separate
- * chrome layer, and the cream page tint is what ties it to the surface beneath.
+ * Below `lg` it stacks: the title and the menu button on one row, the actions wrapping onto
+ * the next. Side by side they cannot both fit, and a header that scrolls sideways is worse
+ * than a header that is two rows tall.
+ *
+ * The translucent background matters — a fully opaque bar would read as a separate chrome
+ * layer, and the cream page tint is what ties it to the surface beneath.
  */
 export default function PageHeader({ title, subtitle, note, children, dense }: Props) {
   const colors = useTheme();
   const { authenticated } = useUnoraWallet();
+  const { openMobile, isDesktop } = useSidebar();
 
   return (
     <header
@@ -53,33 +60,50 @@ export default function PageHeader({ title, subtitle, note, children, dense }: P
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease }}
-        className={`max-w-[1100px] mx-auto px-8 flex justify-between gap-8 ${
-          dense ? 'py-4 items-center' : 'py-6 items-center'
+        className={`max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row lg:justify-between gap-3 lg:gap-8 ${
+          dense ? 'py-3 lg:py-4 lg:items-center' : 'py-4 lg:py-6 lg:items-center'
         }`}
       >
-        <div className="min-w-0">
-          <h1
-            className={`font-serif tracking-tight ${dense ? 'text-2xl' : 'text-3xl'} ${
-              authenticated && !dense ? 'mb-2' : ''
-            }`}
-            style={{ color: colors.text }}
-          >
-            {title}
-          </h1>
-
-          {authenticated && (
-            <p
-              className={`font-sans leading-relaxed ${dense ? 'text-xs' : 'text-sm max-w-lg'}`}
-              style={{ color: dense ? colors.textMuted : colors.textSecondary }}
+        <div className="flex items-start gap-3 min-w-0">
+          {/* Below `lg` the rail is a drawer, so it needs a way in. */}
+          {!isDesktop && (
+            <button
+              type="button"
+              onClick={openMobile}
+              aria-label="Open menu"
+              className="w-9 h-9 rounded-xl flex items-center justify-center border shadow-sm transition-colors hover:bg-white shrink-0 mt-0.5"
+              style={{ borderColor: colors.border }}
             >
-              {subtitle}
-            </p>
+              <Menu className="w-4 h-4" style={{ color: colors.textMuted }} strokeWidth={1.5} />
+            </button>
           )}
 
-          {authenticated && note && <div className="mt-2.5">{note}</div>}
+          <div className="min-w-0">
+            <h1
+              className={`font-serif tracking-tight ${
+                dense ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl'
+              } ${authenticated && !dense ? 'mb-2' : ''}`}
+              style={{ color: colors.text }}
+            >
+              {title}
+            </h1>
+
+            {authenticated && (
+              <p
+                className={`font-sans leading-relaxed ${
+                  dense ? 'text-xs' : 'text-sm max-w-lg'
+                }`}
+                style={{ color: dense ? colors.textMuted : colors.textSecondary }}
+              >
+                {subtitle}
+              </p>
+            )}
+
+            {authenticated && note && <div className="mt-2.5">{note}</div>}
+          </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 lg:shrink-0">
           {authenticated && <GlobalSearch />}
           {authenticated && children}
           <ConnectWalletButton />
