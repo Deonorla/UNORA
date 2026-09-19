@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { POSITION_TONES } from '@/lib/position';
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -63,26 +64,74 @@ function FloatingCard({
 }
 
 /**
- * The same card, in normal flow. Below `lg` the floating arrangement is replaced by this —
- * see the note in `Hero`.
+ * A card back peeking in from the edge of a phone screen.
+ *
+ * Below `lg` the main card takes the middle and these sit behind it, half off-screen, so the
+ * arrangement keeps the depth of the desktop stage without stacking five cards into a page
+ * three screens long.
+ *
+ * These are deliberately **not** the real cards. At a ~50px sliver, a real card's contents
+ * truncate into "Str…" and "$8" — worse than showing nothing. A tinted back with the mark and
+ * the card's name reads as "there are more cards" at any width, which is the whole job here.
  */
-function StaticCard({
-  children,
+function PeekCard({
+  label,
+  tone,
+  side,
+  top,
+  rotate,
   delay,
   ready,
 }: {
-  children: React.ReactNode;
+  label: string;
+  tone: { color: string; fill: string };
+  side: 'left' | 'right';
+  top: string;
+  rotate: number;
   delay: number;
   ready: boolean;
 }) {
+  const [entered, setEntered] = useState(false);
+
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setTimeout(() => setEntered(true), (delay + 0.9) * 1000);
+    return () => clearTimeout(timer);
+  }, [delay, ready]);
+
+  const from = side === 'left' ? -80 : 80;
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={ready ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
-      transition={{ duration: 0.6, delay, ease }}
-      className={CARD_SHELL}
+      className="absolute w-[132px] h-[172px] rounded-2xl border shadow-[0_12px_48px_rgba(124,58,237,0.14)] pointer-events-none select-none overflow-hidden"
+      style={{ top, [side]: '-82px', backgroundColor: tone.fill, borderColor: tone.color }}
+      initial={{ opacity: 0, x: from, rotate: rotate * 1.7, scale: 0.8 }}
+      animate={
+        entered
+          ? { opacity: 1, x: 0, scale: 0.86, rotate: [rotate, rotate + 1.6, rotate], y: [0, -8, 0] }
+          : { opacity: 0, x: from, rotate: rotate * 1.7, scale: 0.8 }
+      }
+      transition={
+        entered
+          ? {
+              opacity: { duration: 0.7, delay, ease },
+              x: { duration: 0.85, delay, ease },
+              scale: { duration: 0.85, delay, ease },
+              y: { duration: 5.5, repeat: Infinity, ease: 'easeInOut' },
+              rotate: { duration: 6.5, repeat: Infinity, ease: 'easeInOut' },
+            }
+          : { duration: 0.85, delay, ease }
+      }
     >
-      {children}
+      <div className="p-3 h-full flex flex-col justify-between">
+        <img src="/Unora icon.png" alt="" className="h-4 w-auto opacity-80" />
+        <span
+          className="font-mono text-[8px] uppercase tracking-widest leading-relaxed"
+          style={{ color: tone.color }}
+        >
+          {label}
+        </span>
+      </div>
     </motion.div>
   );
 }
@@ -183,39 +232,42 @@ function LendingCardBody({ ready }: { ready: boolean }) {
 function ActivityCardBody({ ready }: { ready: boolean }) {
   const colors = useTheme();
   return (
-    <div className="p-5 sm:p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-3">
-          <img src="/Unora icon.png" alt="" className="h-5 w-auto" />
-          <span className="font-sans text-sm font-medium" style={{ color: colors.text }}>Activity Dashboard</span>
+    <div className="p-4 sm:p-6">
+      {/* Header. "Filters" is dropped below `sm` — at a ~290px card the title, the live badge
+          and the filters chip together push the title into an ellipsis. */}
+      <div className="flex items-center justify-between gap-2 mb-4 sm:mb-5">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <img src="/Unora icon.png" alt="" className="h-4 sm:h-5 w-auto shrink-0" />
+          <span className="font-sans text-xs sm:text-sm font-medium truncate" style={{ color: colors.text }}>
+            Activity Dashboard
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <motion.span
-            className="font-mono text-[8px] px-2.5 py-1 rounded-full bg-purple-100 text-purple-600"
+            className="font-mono text-[8px] px-2 sm:px-2.5 py-1 rounded-full bg-purple-100 text-purple-600"
             initial={{ opacity: 0 }}
             animate={ready ? { opacity: [0, 1, 0.7, 1] } : { opacity: 0 }}
             transition={{ duration: 1.5, delay: 1.8, ease }}
           >
             Live
           </motion.span>
-          <span className="font-mono text-[8px] px-2.5 py-1 rounded-full bg-white/60 border border-white/40" style={{ color: colors.textMuted }}>Filters</span>
+          <span className="hidden sm:inline-block font-mono text-[8px] px-2.5 py-1 rounded-full bg-white/60 border border-white/40" style={{ color: colors.textMuted }}>Filters</span>
         </div>
       </div>
 
       {/* Search */}
       <motion.div
-        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/60 border border-white/40 mb-5"
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/60 border border-white/40 mb-4 sm:mb-5"
         initial={{ opacity: 0, scaleX: 0.9 }}
         animate={ready ? { opacity: 1, scaleX: 1 } : { opacity: 0, scaleX: 0.9 }}
         transition={{ duration: 0.5, delay: 1.2, ease }}
       >
         <div className="w-3.5 h-3.5 rounded-full bg-gray-300" />
-        <span className="font-sans text-xs" style={{ color: colors.textMuted }}>Search in activities...</span>
+        <span className="font-sans text-xs truncate" style={{ color: colors.textMuted }}>Search in activities...</span>
       </motion.div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 mb-4 sm:mb-5">
         {[
           { label: 'Score', value: '72', sub: '+4', subColor: '#22C55E' },
           { label: 'Loaned', value: '$8.2k', sub: '4.2% APR', subColor: colors.textMuted },
@@ -420,28 +472,28 @@ export default function Hero({ ready }: { ready: boolean }) {
         </FloatingCard>
       </div>
 
-      {/* The same cards, in flow, below `lg`. The dashboard goes first because it is the
-          fullest picture of the product; the four accent cards follow in a two-up grid. */}
-      <div className="relative z-10 w-full max-w-[1400px] mx-auto px-6 mt-12 lg:hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <StaticCard delay={0.9} ready={ready}>
-              <ActivityCardBody ready={ready} />
-            </StaticCard>
-          </div>
-          <StaticCard delay={1.0} ready={ready}>
-            <ScoreCardBody ready={ready} />
-          </StaticCard>
-          <StaticCard delay={1.05} ready={ready}>
-            <LoanCardBody ready={ready} />
-          </StaticCard>
-          <StaticCard delay={1.1} ready={ready}>
-            <LendingCardBody ready={ready} />
-          </StaticCard>
-          <StaticCard delay={1.15} ready={ready}>
-            <YieldCardBody ready={ready} />
-          </StaticCard>
-        </div>
+      {/* Below `lg`: one main card, with the others peeking in from the edges.
+          Unhiding the desktop stage is not an option — it is absolutely positioned across
+          1400px, so on a phone the cards land on top of each other. Stacking all five instead
+          made the hero three screens long.
+
+          The main card is inset by 52px a side, which is exactly how much of a card back
+          shows. No container padding here: the gutter *is* the peek, so it has to be exact. */}
+      <div className="relative z-10 w-full max-w-[1400px] mx-auto mt-12 lg:hidden">
+        <PeekCard label="Score" tone={POSITION_TONES.score} side="left" top="3%" rotate={-8} delay={1.0} ready={ready} />
+        <PeekCard label="Deposit" tone={POSITION_TONES.deposit} side="left" top="58%" rotate={-6} delay={1.15} ready={ready} />
+        <PeekCard label="Loan" tone={POSITION_TONES.borrow} side="right" top="12%" rotate={7} delay={1.05} ready={ready} />
+        <PeekCard label="Yield" tone={POSITION_TONES.deposit} side="right" top="66%" rotate={5} delay={1.2} ready={ready} />
+
+        {/* In flow, so it sets the height everything else is positioned against. */}
+        <motion.div
+          initial={{ opacity: 0, y: 28, scale: 0.97 }}
+          animate={ready ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 28, scale: 0.97 }}
+          transition={{ duration: 0.7, delay: 0.9, ease }}
+          className={`relative z-10 mx-auto w-[calc(100%-104px)] ${CARD_SHELL}`}
+        >
+          <ActivityCardBody ready={ready} />
+        </motion.div>
       </div>
     </section>
   );

@@ -334,6 +334,16 @@ export function positionDeposited(lending: LendingPosition): number {
   return lending.holdings.reduce((sum, h) => sum + h.deposited, 0);
 }
 
+/**
+ * Card palette for a wallet's positions. Purple is identity, green is money coming in, amber
+ * is money owed. Shared so the landing hero's card backs match the dashboard's deck.
+ */
+export const POSITION_TONES = {
+  score: { color: '#7C3AED', fill: '#E7DBF1' },
+  borrow: { color: '#BA7517', fill: '#EFE3D3' },
+  deposit: { color: '#639922', fill: '#E3E8D5' },
+} as const;
+
 export function poolName(pool: PoolId): string {
   return POOLS.find((p) => p.id === pool)?.name ?? pool;
 }

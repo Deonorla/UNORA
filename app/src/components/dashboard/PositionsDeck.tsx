@@ -6,6 +6,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { SCORE } from '@/lib/protocol';
 import {
   BORROW_POSITION,
+  POSITION_TONES as TONE,
   TIER_LADDER,
   blendedApy,
   poolName,
@@ -24,24 +25,13 @@ const CARD_H = 224;
  */
 const SPREAD = 296;
 
-/**
- * Below this the fan is replaced by a plain stack — see `PositionsDeck`.
+/** Below this the fan is replaced by a plain stack — see `PositionsDeck`.
  *
  * `xl`, not `md`. The fanned deck spans 2 x SPREAD + CARD_W = 912px, and the content column
  * only offers that much at 1280 once the 240px rail and the page gutters are subtracted. At
  * 1024 it has 720px, so a fan there pushes the outer two cards off-screen.
  */
 const FAN_QUERY = '(min-width: 1280px)';
-
-/**
- * Colour carries meaning across the three cards: purple is identity, green is money coming in,
- * amber is money owed. The badge carries the finer status.
- */
-const TONE = {
-  score: { color: '#7C3AED', fill: '#E7DBF1' },
-  borrow: { color: '#BA7517', fill: '#EFE3D3' },
-  deposit: { color: '#639922', fill: '#E3E8D5' },
-};
 
 interface DeckCard {
   key: string;
